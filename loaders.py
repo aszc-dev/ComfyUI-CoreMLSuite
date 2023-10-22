@@ -45,7 +45,13 @@ class CoreMLLoader:
         #  get the model to load - implement a proper model config
         model_config = supported_models_base.BASE({})
         model_config.latent_format = SD15()
-        model_config.unet_config = {"disable_unet_model_creation": True}
+        model_config.unet_config = {
+            "disable_unet_model_creation": True,
+            "num_res_blocks": 2,
+            "attention_resolutions": [1, 2, 4],
+            "channel_mult": [1, 2, 4, 4],
+            "transformer_depth": [1, 1, 1, 0],
+        }
         return (CoreMLModelWrapper(model_config, coreml_path, compute_unit,
                                    sources),)
 
