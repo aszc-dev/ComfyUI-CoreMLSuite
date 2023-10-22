@@ -16,7 +16,12 @@ class CoreMLLoader:
         return {
             "required": {
                 "coreml_name": (list(s.coreml_filenames().keys()),),
-                "compute_unit": (list(ComputeUnit.__members__.keys()),)
+                "compute_unit": ([
+                                     ComputeUnit.CPU_AND_NE.name,
+                                     ComputeUnit.CPU_AND_GPU.name,
+                                     ComputeUnit.ALL.name,
+                                     ComputeUnit.CPU_ONLY.name,
+                                 ],)
             }
         }
 
