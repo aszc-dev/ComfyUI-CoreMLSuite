@@ -34,7 +34,7 @@ Alternatively, you can download the repository as a zip file and extract it into
 
 ```bash
 cd /path/to/comfyui/custom_nodes
-git clone this-repo
+git clone https://github.com/aszc-dev/ComfyUI-CoreMLSuite.git
 ```
 Then, use pip or other package manager to install the dependencies:
 ```bash
@@ -45,8 +45,10 @@ pip install -r requirements.txt
 ## Usage
 ### Available Nodes
 
-#### CoreML Unet Loader (`CoreMLUnetLoader`)
-This node allows you to load a Core ML Unet model and use it in your ComfyUI workflow. Place the converted 
+#### CoreML UNet Loader (`CoreMLUnetLoader`)
+![CoreMLUnetLoader](https://github.com/aszc-dev/ComfyUI-CoreMLSuite/assets/24932801/2bd10f73-4103-4860-894c-b6a6e56c6546)
+
+This node allows you to load a Core ML UNet model and use it in your ComfyUI workflow. Place the converted 
 .mlpackage or .mlmodelc file in ComfyUI's models/unet directory and use the node to load the model. The output of the 
 node is a `MODEL` object similar to standard ComfyUI models.  
 Additionally, you can select the Compute Unit, that will be used to run the model. The default is `CPU_AND_NE`, which
