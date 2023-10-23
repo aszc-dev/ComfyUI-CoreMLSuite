@@ -15,7 +15,6 @@ of ~1.5-2x.
 ### Features
 - Loading Core ML Unet models
 - Support for ControlNet
-- Support for LoRA
 - Support for ANE (Apple Neural Engine)
 - Support for CPU and GPU
 - Support for `mlmodelc` and `mlpackage` files
@@ -67,6 +66,7 @@ as ControlNet input.
 that the nodes in this repository are not as flexible as the standard ComfyUI nodes. You need to use
 latent images of the same size as the input of the model (512x512 is the default for SD1.5)
 - For now, only Stable Diffusion v1.5 is supported.
+- LoRA is not supported yet.
 
 [^1]: Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes) is used during conversion. Needs more testing. 
 
