@@ -74,8 +74,7 @@ gives the best results. You may, however, want to use `CPU_AND_GPU`, `ALL` or `C
 - For now, only Stable Diffusion v1.5 is supported.
 - LoRA is not supported yet.
 
-[^1]:
-Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes)
+[^1]: Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes)
 is used during conversion. Needs more testing.
 
 ## Support
