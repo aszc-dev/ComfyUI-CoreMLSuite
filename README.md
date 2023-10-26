@@ -51,8 +51,8 @@ That's it! You're now ready to start enhancing your ComfyUI workflows with Core 
 
 > [!NOTE]
 > Note on Compute Units:
-> For the model to run on the ANE, the model must be converted with the `--cross-attention SPLIT_EINSUM` option.
-> Models converted with `--cross-attention ORIGINAL` will run on GPU instead of ANE.
+> For the model to run on the ANE, the model must be converted with the `--attention-implementation SPLIT_EINSUM` option.
+> Models converted with `--attention-implementation ORIGINAL` will run on GPU instead of ANE.
 
 ## Features
 These custom nodes come with a host of features, including:
