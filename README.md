@@ -4,7 +4,8 @@
 
 Welcome! I've developed a set of custom nodes for ComfyUI that allows you to use Core ML models in your ComfyUI
 workflows.
-These models can enhance your workflows and improve performance on Apple Silicon (M1/M2) machines.
+These models are designed to leverage the Apple Neural Engine (ANE) on Apple Silicon (M1/M2) machines, 
+thereby enhancing your workflows and improving performance.
 
 If you're not sure how to obtain these models, you can download them
 [here](https://huggingface.co/coreml-community) or convert your own models using
