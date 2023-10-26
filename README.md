@@ -126,6 +126,8 @@ as long as it's compatible with Stable Diffusion v1.5.
    - The Core ML UNet model is available 
    [here](https://huggingface.co/coreml-community/coreml-stable-diffusion-v1-5_cn/blob/main/split_einsum/stable-diffusion-_v1-5_split-einsum_cn.zip).
    Once downloaded, place the model in the `models/unet` directory.
+![coreml-unet+clip+vae](https://github.com/aszc-dev/ComfyUI-CoreMLSuite/assets/24932801/ff7b8d75-37ea-4da9-a258-829edd6eb1b7)
+
 
 2. **Loading text encoder (CLIP) and VAE models from checkpoint file**
    - This workflow loads the CLIP and VAE models from the checkpoint file available
@@ -134,6 +136,7 @@ as long as it's compatible with Stable Diffusion v1.5.
    - The Core ML UNet model is available 
    [here](https://huggingface.co/coreml-community/coreml-stable-diffusion-v1-5_cn/blob/main/split_einsum/stable-diffusion-_v1-5_split-einsum_cn.zip). 
    Once downloaded, place the model in the `models/unet` directory.
+![coreml-unet+checkpoint](https://github.com/aszc-dev/ComfyUI-CoreMLSuite/assets/24932801/0c8b4f65-9bde-4b0d-936b-5bb27023d2ce)
 
 
 #### ControlNet with Core ML UNet loader 
