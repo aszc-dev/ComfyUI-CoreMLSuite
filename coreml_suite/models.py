@@ -50,20 +50,21 @@ class CoreMLModelWrapper(BaseModel):
         merged_out = merge_chunks(chunked_out, x.shape)
         return merged_out
 
+    def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
+                    control=None, transformer_options={}):
+        model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
+        residual_kwargs = extract_residual_kwargs(self.diffusion_model,
+                                                  control)
+        model_input_kwargs |= residual_kwargs
+
+        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
+        return torch.from_numpy(np_out).to(x.device)
+
     def get_dtype(self):
         # Hardcoding torch-compatible dtype (used for memory allocation)
         return torch.float16
 
-    def _apply_model(
-        self,
-        x,
-        t,
-        c_concat=None,
-        c_crossattn=None,
-        c_adm=None,
-        control=None,
-        transformer_options={},
-    ):
+    def prepare_inputs(self, x, t, c_crossattn, control):
         sample = x.cpu().numpy().astype(np.float16)
 
         context = c_crossattn.cpu().numpy().astype(np.float16)
@@ -78,10 +79,8 @@ class CoreMLModelWrapper(BaseModel):
         }
         residual_kwargs = extract_residual_kwargs(self.diffusion_model, control)
         model_input_kwargs |= residual_kwargs
-        # model_input_kwargs = expand_inputs(model_input_kwargs)
 
-        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return torch.from_numpy(np_out).to(x.device)
+        return model_input_kwargs
 
     def chunk_inputs(self, x, t, c_crossattn, control):
         sample_shape = self.expected_inputs["sample"]["shape"]
@@ -102,3 +101,15 @@ class CoreMLModelWrapper(BaseModel):
     @property
     def expected_inputs(self):
         return self.diffusion_model.expected_inputs
+
+class CoreMLModelWrapperLCM(CoreMLModelWrapper):
+    def __init__(self, model_config, coreml_model):
+        super().__init__(model_config, coreml_model)
+        self.config = None
+
+    def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
+                    control=None, transformer_options={}):
+        model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
+
+        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
+        return torch.from_numpy(np_out).to(x.device)
