@@ -30,14 +30,14 @@ class CoreMLModelWrapper(BaseModel):
         self.diffusion_model = coreml_model
 
     def apply_model(
-        self,
-        x,
-        t,
-        c_concat=None,
-        c_crossattn=None,
-        c_adm=None,
-        control=None,
-        transformer_options={},
+            self,
+            x,
+            t,
+            c_concat=None,
+            c_crossattn=None,
+            c_adm=None,
+            control=None,
+            transformer_options={},
     ):
         chunked_in = self.chunk_inputs(x, t, c_crossattn, control)
         chunked_out = [
@@ -53,9 +53,6 @@ class CoreMLModelWrapper(BaseModel):
     def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
                     control=None, transformer_options={}):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
-        residual_kwargs = extract_residual_kwargs(self.diffusion_model,
-                                                  control)
-        model_input_kwargs |= residual_kwargs
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
         return torch.from_numpy(np_out).to(x.device)
@@ -112,4 +109,7 @@ class CoreMLModelWrapperLCM(CoreMLModelWrapper):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return torch.from_numpy(np_out).to(x.device)
+        return (torch.from_numpy(np_out).to(x.device),)
+
+    def __call__(self, latents, t, encoder_hidden_states, **kwargs):
+        return self.apply_model(latents, t, c_crossattn=encoder_hidden_states, **kwargs)
