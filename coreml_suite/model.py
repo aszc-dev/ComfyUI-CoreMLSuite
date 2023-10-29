@@ -5,7 +5,7 @@ from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
 from comfy.model_base import BaseModel
 
-from .utils import expand_inputs, extract_residual_kwargs
+from coreml_suite.utils import expand_inputs, extract_residual_kwargs
 
 
 class CoreMLModelWrapper(BaseModel):

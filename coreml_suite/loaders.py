@@ -5,9 +5,9 @@ import folder_paths
 from comfy import supported_models_base, model_management
 from comfy.latent_formats import SD15
 from comfy.model_patcher import ModelPatcher
-from .logger import logger
-from .model import CoreMLModelWrapper
 
+from coreml_suite.logger import logger
+from coreml_suite.model import CoreMLModelWrapper
 
 class CoreMLLoader:
     PACKAGE_DIRNAME = ""

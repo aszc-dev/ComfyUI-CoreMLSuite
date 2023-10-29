@@ -3,7 +3,7 @@ from itertools import chain
 import numpy as np
 import torch
 
-from .logger import logger
+from coreml_suite.logger import logger
 
 
 def expand_inputs(inputs):
