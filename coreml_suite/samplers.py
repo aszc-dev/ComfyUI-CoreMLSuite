@@ -37,7 +37,7 @@ class CoreMLSampler(KSampler):
             "optional": {"latent_image": ("LATENT",)},
         }
 
-    CATEGORY = "CoreML Suite"
+    CATEGORY = "Core ML Suite"
 
     def sample(
         self,

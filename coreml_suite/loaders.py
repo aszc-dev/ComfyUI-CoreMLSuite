@@ -28,7 +28,7 @@ class CoreMLLoader:
         }
 
     FUNCTION = "load"
-    CATEGORY = "CoreML Suite"
+    CATEGORY = "Core ML Suite"
 
     @classmethod
     def coreml_filenames(cls):
