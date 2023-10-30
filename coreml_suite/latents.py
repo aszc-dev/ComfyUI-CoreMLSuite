@@ -1,20 +1,33 @@
 import torch
-from torchvision.transforms.functional import resize
-
-from coreml_suite.logger import logger
 
 
-def reshape_latent_image(latent_image, target_shape):
-    if latent_image is None:
-        logger.warning("No latent image provided, using zeros.")
-        return {"samples": torch.zeros(target_shape)}
+def chunk_batch(latent_image, target_shape):
+    if latent_image.shape == target_shape:
+        return [latent_image]
 
-    if latent_image["samples"].shape == target_shape:
-        return latent_image
+    batch_size = latent_image.shape[0]
+    target_batch_size = target_shape[0]
 
-    logger.warning(
-        "Latent image shape does not match model input shape,"
-        " resizing to match models expected input shape."
-    )
-    resized = resize(latent_image["samples"], target_shape[-2:])
-    return {"samples": resized}
+    num_chunks = batch_size // target_batch_size
+    if num_chunks == 0:
+        padding = torch.zeros(target_batch_size - batch_size, *target_shape[1:])
+        return [torch.cat((latent_image, padding), dim=0)]
+
+    mod = batch_size % target_batch_size
+    if mod != 0:
+        chunks = list(torch.chunk(latent_image[:-mod], num_chunks))
+        padding = torch.zeros(target_batch_size - mod, *target_shape[1:])
+        padded = torch.cat((latent_image[-mod:], padding), dim=0)
+        chunks.append(padded)
+        return [chunk for chunk in chunks]
+
+    chunks = list(torch.chunk(latent_image, num_chunks))
+
+    return [chunk for chunk in chunks]
+
+
+def merge_chunks(chunks, orig_shape):
+    merged = torch.cat(chunks, dim=0)
+    if merged.shape == orig_shape:
+        return merged
+    return merged[: orig_shape[0]]

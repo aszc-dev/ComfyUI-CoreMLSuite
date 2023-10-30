@@ -7,6 +7,7 @@ from comfy.latent_formats import SD15
 from comfy.model_base import BaseModel
 
 from coreml_suite.controlnet import expand_inputs, extract_residual_kwargs
+from coreml_suite.latents import chunk_batch, merge_chunks
 
 
 def get_model_config():
@@ -39,6 +40,36 @@ class CoreMLModelWrapper(BaseModel):
         control=None,
         transformer_options={},
     ):
+        sample_shape = self.diffusion_model.expected_inputs["sample"]["shape"]
+
+        chunked_x = chunk_batch(x, sample_shape)
+        ts = t.chunk(len(chunked_x), dim=0)
+        chunked_context = c_crossattn.chunk(len(chunked_x), dim=0)
+
+        chunked_out = [
+            self._apply_model(
+                x, t, c_concat, c_crossattn, c_adm, control, transformer_options
+            )
+            for x, t, c_crossattn in zip(chunked_x, ts, chunked_context)
+        ]
+
+        merged_out = merge_chunks(chunked_out, x.shape)
+        return merged_out
+
+    def get_dtype(self):
+        # Hardcoding torch-compatible dtype (used for memory allocation)
+        return torch.float16
+
+    def _apply_model(
+        self,
+        x,
+        t,
+        c_concat=None,
+        c_crossattn=None,
+        c_adm=None,
+        control=None,
+        transformer_options={},
+    ):
         sample = x.cpu().numpy().astype(np.float16)
 
         context = c_crossattn.cpu().numpy().astype(np.float16)
@@ -53,11 +84,11 @@ class CoreMLModelWrapper(BaseModel):
         }
         residual_kwargs = extract_residual_kwargs(self.diffusion_model, control)
         model_input_kwargs |= residual_kwargs
-        model_input_kwargs = expand_inputs(model_input_kwargs)
+        # model_input_kwargs = expand_inputs(model_input_kwargs)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
         return torch.from_numpy(np_out).to(x.device)
 
-    def get_dtype(self):
-        # Hardcoding torch-compatible dtype (used for memory allocation)
-        return torch.float16
+    @property
+    def expected_inputs(self):
+        return self.diffusion_model.expected_inputs
