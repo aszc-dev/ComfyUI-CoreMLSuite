@@ -180,7 +180,7 @@ being loaded using the standard ComfyUI nodes. Please refer to
 the [basic txt2img workflow](#basic-txt2img-with-core-ml-unet-loader) for more details on how to load the CLIP and VAE
 models.
 The ControlNet model used in this workflow is available
-[here](https://huggingface.co/lllyasviel/ControlNet-v1-1/blob/main/control_v11p_sd15_lineart.pth).
+[here](https://huggingface.co/lllyasviel/control_v11p_sd15_scribble/blob/main/diffusion_pytorch_model.fp16.safetensors).
 Once downloaded, place the model in the `models/controlnet` directory.
 ![coreml-unet+controlnet](./assets/unet+sampler+controlnet.png?raw=true)
 
