@@ -6,6 +6,7 @@ import torch
 from comfy.model_management import get_torch_device
 from coreml_suite.lcm.lcm_pipeline import LatentConsistencyModelPipeline
 from coreml_suite.lcm.lcm_scheduler import LCMScheduler
+from coreml_suite.models import get_model_config, CoreMLModelWrapperLCM
 
 
 class CoreMLSamplerLCM:
@@ -19,7 +20,7 @@ class CoreMLSamplerLCM:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "model": ("MODEL",),
+                "coreml_model": ("COREML_UNET",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
                 "steps": ("INT", {"default": 4, "min": 1, "max": 10000}),
                 "cfg": (
@@ -46,7 +47,7 @@ class CoreMLSamplerLCM:
 
     def sample(
         self,
-        model,
+        coreml_model,
         seed,
         steps,
         cfg,
@@ -56,6 +57,10 @@ class CoreMLSamplerLCM:
         num_images,
         use_fp16,
     ):
+
+        model_config = get_model_config()
+        wrapped_model = CoreMLModelWrapperLCM(model_config, coreml_model)
+
         if self.pipe is None:
             self.pipe = LatentConsistencyModelPipeline.from_pretrained(
                 pretrained_model_name_or_path="SimianLuo/LCM_Dreamshaper_v7",
@@ -68,7 +73,7 @@ class CoreMLSamplerLCM:
             else:
                 self.pipe.to(torch_device=get_torch_device(), torch_dtype=torch.float32)
 
-            coreml_unet = model.model
+            coreml_unet = wrapped_model
             coreml_unet.config = self.pipe.unet.config
 
             self.pipe.unet = coreml_unet

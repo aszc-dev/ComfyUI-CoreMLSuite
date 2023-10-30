@@ -25,7 +25,7 @@ MODEL_NAME = MODEL_VERSION.split("/")[-1] + "_4k"
 
 import python_coreml_stable_diffusion.unet as unet
 
-unet.ATTENTION_IMPLEMENTATION_IN_EFFECT = unet.AttentionImplementations.SPLIT_EINSUM_V2
+unet.ATTENTION_IMPLEMENTATION_IN_EFFECT = unet.AttentionImplementations.SPLIT_EINSUM
 
 
 def get_unets():
