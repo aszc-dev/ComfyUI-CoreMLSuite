@@ -6,7 +6,7 @@ from comfy import supported_models_base
 from comfy.latent_formats import SD15
 from comfy.model_base import BaseModel
 
-from coreml_suite.controlnet import expand_inputs, extract_residual_kwargs
+from coreml_suite.controlnet import extract_residual_kwargs, chunk_control
 from coreml_suite.latents import chunk_batch, merge_chunks
 
 
@@ -45,12 +45,15 @@ class CoreMLModelWrapper(BaseModel):
         chunked_x = chunk_batch(x, sample_shape)
         ts = t.chunk(len(chunked_x), dim=0)
         chunked_context = c_crossattn.chunk(len(chunked_x), dim=0)
+        chunked_control = chunk_control(control, len(chunked_x))
 
         chunked_out = [
             self._apply_model(
                 x, t, c_concat, c_crossattn, c_adm, control, transformer_options
             )
-            for x, t, c_crossattn in zip(chunked_x, ts, chunked_context)
+            for x, t, c_crossattn, control in zip(
+                chunked_x, ts, chunked_context, chunked_control
+            )
         ]
 
         merged_out = merge_chunks(chunked_out, x.shape)

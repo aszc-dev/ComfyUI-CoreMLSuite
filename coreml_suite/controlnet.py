@@ -60,3 +60,20 @@ def no_control(model):
         for i in range(len(residuals_names))
     }
     return residual_kwargs
+
+
+def chunk_control(cn, num_chunks):
+    if cn is None:
+        return [None] * num_chunks
+
+    chunked = []
+
+    chunk_size = len(cn["output"][0]) // num_chunks
+
+    for i in range(0, len(cn["output"][0]), chunk_size):
+        chunk = {}
+        chunk["output"] = [x[i : i + chunk_size] for x in cn["output"]]
+        chunk["middle"] = [x[i : i + chunk_size] for x in cn["middle"]]
+        chunked.append(chunk)
+
+    return chunked
