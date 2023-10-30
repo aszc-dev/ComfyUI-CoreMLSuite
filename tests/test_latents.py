@@ -2,7 +2,7 @@ import pytest
 
 import torch
 
-from coreml_suite.samplers import reshape_latent_image
+from coreml_suite.latents import reshape_latent_image
 
 
 def test_fix_latents_no_latent_image():

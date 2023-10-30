@@ -6,7 +6,7 @@ from comfy import supported_models_base
 from comfy.latent_formats import SD15
 from comfy.model_base import BaseModel
 
-from coreml_suite.utils import expand_inputs, extract_residual_kwargs
+from coreml_suite.controlnet import expand_inputs, extract_residual_kwargs
 
 
 def get_model_config():
