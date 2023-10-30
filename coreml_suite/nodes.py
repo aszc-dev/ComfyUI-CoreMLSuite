@@ -28,24 +28,24 @@ class CoreMLSampler(KSampler):
     CATEGORY = "Core ML Suite"
 
     def sample(
-        self,
-        coreml_model,
-        seed,
-        steps,
-        cfg,
-        sampler_name,
-        scheduler,
-        positive,
-        negative,
-        latent_image=None,
-        denoise=1.0,
+            self,
+            coreml_model,
+            seed,
+            steps,
+            cfg,
+            sampler_name,
+            scheduler,
+            positive,
+            negative,
+            latent_image=None,
+            denoise=1.0,
     ):
         sample_shape = coreml_model.expected_inputs["sample"]["shape"]
         latent_image = reshape_latent_image(latent_image, sample_shape)
         latent_image["samples"] = latent_image["samples"][0:1]
 
         model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(model_config, coreml_model)
+        wrapped_model = CoreMLModelAdapter(model_config, coreml_model)
         model = ModelPatcher(wrapped_model, get_torch_device(), None)
 
         return super().sample(
@@ -99,9 +99,6 @@ class CoreMLLoader:
 
         sources = "compiled" if coreml_name.endswith(".mlmodelc") else "packages"
 
-        return self._load(coreml_path, compute_unit, sources)
-
-    def _load(self, coreml_path, compute_unit, sources):
         return (CoreMLModel(coreml_path, compute_unit, sources),)
 
 
@@ -109,3 +106,29 @@ class CoreMLLoaderUNet(CoreMLLoader):
     PACKAGE_DIRNAME = "unet"
     RETURN_TYPES = ("COREML_UNET",)
     RETURN_NAMES = ("coreml_model",)
+
+
+class CoreMLModelAdapter:
+    """
+    Adapter Node to use CoreML models as Comfy models. This is an experimental
+    feature and may not work as expected.
+    """
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "coreml_model": ("COREML_UNET",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL",)
+
+    FUNCTION = "wrap"
+    CATEGORY = "Core ML Suite"
+
+    def wrap(self, coreml_model):
+        model_config = get_model_config()
+        wrapped_model = CoreMLModelWrapper(model_config, coreml_model)
+        patched_model = ModelPatcher(wrapped_model, get_torch_device(), None)
+        return (patched_model,)
