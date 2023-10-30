@@ -1,5 +1,6 @@
 import os
 
+import torch
 from coremltools import ComputeUnit
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
@@ -7,7 +8,6 @@ import folder_paths
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite.logger import logger
-from coreml_suite.latents import reshape_latent_image
 from nodes import KSampler
 
 from coreml_suite.models import CoreMLModelWrapper, get_model_config
@@ -28,25 +28,32 @@ class CoreMLSampler(KSampler):
     CATEGORY = "Core ML Suite"
 
     def sample(
-            self,
-            coreml_model,
-            seed,
-            steps,
-            cfg,
-            sampler_name,
-            scheduler,
-            positive,
-            negative,
-            latent_image=None,
-            denoise=1.0,
+        self,
+        coreml_model,
+        seed,
+        steps,
+        cfg,
+        sampler_name,
+        scheduler,
+        positive,
+        negative,
+        latent_image=None,
+        denoise=1.0,
     ):
-        sample_shape = coreml_model.expected_inputs["sample"]["shape"]
-        latent_image = reshape_latent_image(latent_image, sample_shape)
-        latent_image["samples"] = latent_image["samples"][0:1]
-
         model_config = get_model_config()
-        wrapped_model = CoreMLModelAdapter(model_config, coreml_model)
+        wrapped_model = CoreMLModelWrapper(model_config, coreml_model)
         model = ModelPatcher(wrapped_model, get_torch_device(), None)
+
+        if latent_image is None:
+            logger.warning("No latent image provided, using empty tensor.")
+            expected = coreml_model.expected_inputs["sample"]["shape"]
+            latent_image = {"samples": torch.zeros(expected[0] // 2, *expected[1:])}
+
+        batch_size = latent_image["samples"].shape[0]
+        if batch_size != coreml_model.expected_inputs["sample"]["shape"][0]:
+            logger.warning(
+                "Batch size is different from expected input size. Chunking and/or padding will be applied."
+            )
 
         return super().sample(
             model,
