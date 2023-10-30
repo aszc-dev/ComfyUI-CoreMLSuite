@@ -143,6 +143,23 @@ resulting latent as you normally would in your workflow.
     - **LATENT**: The latent image output by the Core ML model. This can be decoded using a VAE Decoder or used as input
       to the next node in your workflow.
 
+#### Core ML Adapter (Experimental) (`CoreMLModelAdapter`)
+
+![CoreMLModelAdapter](./assets/adapter.png?raw=true)
+
+This node allows you to use a Core ML as a standard ComfyUI model. This is an experimental node and may not work with
+all models and nodes. Please use with caution and pay attention to the expected inputs of the model.
+
+- **Input**:
+    - **coreml_model**: The Core ML model to use as a ComfyUI model.
+- **Output**:
+    - **MODEL**: The Core ML model wrapped in a ComfyUI model.
+
+> [!NOTE]
+> While this approach allows you to use Core ML models with many ComfyUI nodes (both standard and custom), the
+> expected inputs of the model will not be checked, which may cause errors. Please make sure to use a model compatible
+> with the expected parameters.
+
 ### Example Workflows
 
 > [!NOTE]
