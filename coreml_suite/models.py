@@ -51,7 +51,7 @@ class CoreMLModelWrapper(BaseModel):
         return merged_out
 
     def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
-                    control=None, transformer_options={}):
+                     control=None, transformer_options={}):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
@@ -99,17 +99,18 @@ class CoreMLModelWrapper(BaseModel):
     def expected_inputs(self):
         return self.diffusion_model.expected_inputs
 
+
 class CoreMLModelWrapperLCM(CoreMLModelWrapper):
     def __init__(self, model_config, coreml_model):
         super().__init__(model_config, coreml_model)
         self.config = None
 
     def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
-                    control=None, transformer_options={}):
+                     control=None, transformer_options={}):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
         return (torch.from_numpy(np_out).to(x.device),)
 
-    def __call__(self, latents, t, encoder_hidden_states, **kwargs):
-        return self.apply_model(latents, t, c_crossattn=encoder_hidden_states, **kwargs)
+    def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
+        return self.apply_model(latents, ts, c_crossattn=encoder_hidden_states)
