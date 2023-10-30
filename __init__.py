@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from coreml_suite import CoreMLLoaderUNet, CoreMLSampler
+from coreml_suite.nodes import CoreMLLoaderUNet, CoreMLSampler
 
 NODE_CLASS_MAPPINGS = {
     "CoreMLUNetLoader": CoreMLLoaderUNet,
