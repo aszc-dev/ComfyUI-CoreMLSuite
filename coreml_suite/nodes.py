@@ -49,12 +49,6 @@ class CoreMLSampler(KSampler):
             expected = coreml_model.expected_inputs["sample"]["shape"]
             latent_image = {"samples": torch.zeros(expected[0] // 2, *expected[1:])}
 
-        batch_size = latent_image["samples"].shape[0]
-        if batch_size != coreml_model.expected_inputs["sample"]["shape"][0]:
-            logger.warning(
-                "Batch size is different from expected input size. Chunking and/or padding will be applied."
-            )
-
         return super().sample(
             model,
             seed,

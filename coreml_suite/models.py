@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 from comfy import supported_models_base
 from comfy.latent_formats import SD15
 from comfy.model_base import BaseModel
@@ -40,20 +39,12 @@ class CoreMLModelWrapper(BaseModel):
         control=None,
         transformer_options={},
     ):
-        sample_shape = self.diffusion_model.expected_inputs["sample"]["shape"]
-
-        chunked_x = chunk_batch(x, sample_shape)
-        ts = t.chunk(len(chunked_x), dim=0)
-        chunked_context = c_crossattn.chunk(len(chunked_x), dim=0)
-        chunked_control = chunk_control(control, len(chunked_x))
-
+        chunked_in = self._chunk_inputs(x, t, c_crossattn, control)
         chunked_out = [
             self._apply_model(
                 x, t, c_concat, c_crossattn, c_adm, control, transformer_options
             )
-            for x, t, c_crossattn, control in zip(
-                chunked_x, ts, chunked_context, chunked_control
-            )
+            for x, t, c_crossattn, control in zip(*chunked_in)
         ]
 
         merged_out = merge_chunks(chunked_out, x.shape)
@@ -95,3 +86,16 @@ class CoreMLModelWrapper(BaseModel):
     @property
     def expected_inputs(self):
         return self.diffusion_model.expected_inputs
+
+    def _chunk_inputs(self, x, t, c_crossattn, control):
+        sample_shape = self.diffusion_model.expected_inputs["sample"]["shape"]
+        timestep_shape = self.diffusion_model.expected_inputs["timestep"]["shape"]
+        hidden_shape = self.diffusion_model.expected_inputs["encoder_hidden_states"][
+            "shape"
+        ]
+        context_shape = (hidden_shape[0], hidden_shape[3], hidden_shape[1])
+        chunked_x = chunk_batch(x, sample_shape)
+        ts = list(torch.full((len(chunked_x), timestep_shape[0]), t[0]))
+        chunked_context = chunk_batch(c_crossattn, context_shape)
+        chunked_control = chunk_control(control, len(chunked_x))
+        return chunked_x, ts, chunked_context, chunked_control

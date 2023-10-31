@@ -2,13 +2,14 @@ import pytest
 
 import torch
 
+from comfy.model_management import get_torch_device
 from coreml_suite.latents import chunk_batch, merge_chunks
 from coreml_suite.controlnet import chunk_control
 
 
 @pytest.mark.parametrize("batch_size", [2, 4, 5, 9])
 def test_batch_chunking(batch_size):
-    latent_image = torch.randn(batch_size, 4, 64, 64)
+    latent_image = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
     target_shape = (4, 4, 64, 64)
 
     chunked = chunk_batch(latent_image, target_shape)
@@ -22,7 +23,7 @@ def test_batch_chunking(batch_size):
 
 @pytest.mark.parametrize("batch_size", [2, 4, 5, 9])
 def test_merge_chunks(batch_size):
-    input_tensor = torch.randn(batch_size, 4, 64, 64)
+    input_tensor = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
     target_shape = (4, 4, 64, 64)
     chunked = chunk_batch(input_tensor, target_shape)
 
@@ -34,8 +35,13 @@ def test_merge_chunks(batch_size):
 
 def test_chunking_controlnet():
     cn = {
-        "output": [torch.randn(4, 4, 64, 64), torch.randn(4, 4, 128, 128)],
-        "middle": [torch.randn(4, 4, 256, 256)],
+        "output": [
+            torch.randn(4, 4, 64, 64).to(get_torch_device()),
+            torch.randn(4, 4, 128, 128).to(get_torch_device()),
+        ],
+        "middle": [
+            torch.randn(4, 4, 256, 256).to(get_torch_device()),
+        ],
     }
     target_batch_size = 2
     num_chunks = cn["output"][0].shape[0] // target_batch_size
