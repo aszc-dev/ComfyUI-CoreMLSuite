@@ -110,7 +110,7 @@ class CoreMLModelWrapperLCM(CoreMLModelWrapper):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return (torch.from_numpy(np_out).to(x.device),)
+        return torch.from_numpy(np_out).to(x.device)
 
     def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
-        return self.apply_model(latents, ts, c_crossattn=encoder_hidden_states)
+        return (self.apply_model(latents, ts, c_crossattn=encoder_hidden_states),)
