@@ -1,8 +1,10 @@
 from itertools import chain
+from math import ceil
 
 import numpy as np
 import torch
 
+from coreml_suite.latents import chunk_batch
 from coreml_suite.logger import logger
 
 
@@ -62,18 +64,18 @@ def no_control(model):
     return residual_kwargs
 
 
-def chunk_control(cn, num_chunks):
+def chunk_control(cn, target_size):
     if cn is None:
-        return [None] * num_chunks
+        return [None] * target_size
 
-    chunked = []
+    num_chunks = ceil(cn["output"][0].shape[0] / target_size)
 
-    chunk_size = len(cn["output"][0]) // num_chunks
+    out = [{"output": [], "middle": []} for _ in range(num_chunks)]
 
-    for i in range(0, len(cn["output"][0]), chunk_size):
-        chunk = {}
-        chunk["output"] = [x[i : i + chunk_size] for x in cn["output"]]
-        chunk["middle"] = [x[i : i + chunk_size] for x in cn["middle"]]
-        chunked.append(chunk)
+    for k, v in cn.items():
+        for i, x in enumerate(v):
+            chunks = chunk_batch(x, (target_size, *x.shape[1:]))
+            for j, chunk in enumerate(chunks):
+                out[j][k].append(chunk)
 
-    return chunked
+    return out
