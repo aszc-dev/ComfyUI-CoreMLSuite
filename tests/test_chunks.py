@@ -7,7 +7,7 @@ from coreml_suite.latents import chunk_batch, merge_chunks
 from coreml_suite.controlnet import chunk_control
 
 
-@pytest.mark.parametrize("batch_size", [2, 4, 5, 9])
+@pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])
 def test_batch_chunking(batch_size):
     latent_image = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
     target_shape = (4, 4, 64, 64)
@@ -21,7 +21,7 @@ def test_batch_chunking(batch_size):
         assert chunked[-1][batch_size % target_shape[0] :].sum() == 0
 
 
-@pytest.mark.parametrize("batch_size", [2, 4, 5, 9])
+@pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])
 def test_merge_chunks(batch_size):
     input_tensor = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
     target_shape = (4, 4, 64, 64)
@@ -33,31 +33,41 @@ def test_merge_chunks(batch_size):
     assert torch.equal(input_tensor, merged)
 
 
-def test_chunking_controlnet():
+@pytest.mark.parametrize(
+    "b, target_size, num_chunks",
+    [
+        (1, 1, 1),
+        (2, 2, 1),
+        (3, 2, 2),
+        (4, 2, 2),
+        (5, 3, 2),
+        (9, 4, 3),
+    ],
+)
+def test_chunking_controlnet(b, target_size, num_chunks):
     cn = {
         "output": [
-            torch.randn(4, 4, 64, 64).to(get_torch_device()),
-            torch.randn(4, 4, 128, 128).to(get_torch_device()),
+            torch.randn(b, 320, 64, 64).to(get_torch_device()),
+            torch.randn(b, 640, 32, 32).to(get_torch_device()),
         ],
         "middle": [
-            torch.randn(4, 4, 256, 256).to(get_torch_device()),
+            torch.randn(b, 1280, 8, 8).to(get_torch_device()),
         ],
     }
-    target_batch_size = 2
-    num_chunks = cn["output"][0].shape[0] // target_batch_size
 
-    chunked = chunk_control(cn, num_chunks)
+    chunked = chunk_control(cn, target_size)
 
+    assert len(chunked) == num_chunks
     for chunk in chunked:
-        assert chunk["output"][0].shape == (target_batch_size, 4, 64, 64)
-        assert chunk["output"][1].shape == (target_batch_size, 4, 128, 128)
-        assert chunk["middle"][0].shape == (target_batch_size, 4, 256, 256)
+        assert chunk["output"][0].shape == (target_size, 320, 64, 64)
+        assert chunk["output"][1].shape == (target_size, 640, 32, 32)
+        assert chunk["middle"][0].shape == (target_size, 1280, 8, 8)
 
 
 def test_chunking_no_control():
     cn = None
-    num_chunks = 2
+    target_size = 2
 
-    chunked = chunk_control(cn, num_chunks)
+    chunked = chunk_control(cn, target_size)
 
     assert chunked == [None, None]
