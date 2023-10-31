@@ -2,8 +2,8 @@
 
 ## Overview
 
-Welcome! I've developed a set of custom nodes for ComfyUI that allows you to use Core ML models in your ComfyUI
-workflows.
+Welcome! In this repository you'll find a set of custom nodes for ComfyUI that allows you to use Core ML models in your
+ComfyUI workflows.
 These models are designed to leverage the Apple Neural Engine (ANE) on Apple Silicon (M1/M2) machines,
 thereby enhancing your workflows and improving performance.
 
@@ -120,10 +120,6 @@ node is a `coreml_model` object that can be used with the Core ML Sampler.
         - `ALL`: The model will run on all available hardware.
 - **Outputs**:
     - **coreml_model**: A Core ML model that can be used with the Core ML Sampler.
-
-> [!NOTE]  
-> Some models are designed to support ControlNet. If you're using such a model,
-> make sure to provide a ControlNet input; otherwise, the model will use random noise as ControlNet input.
 
 #### Core ML Sampler (`CoreMLSampler`)
 
