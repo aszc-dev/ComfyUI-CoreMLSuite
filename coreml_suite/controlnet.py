@@ -36,30 +36,11 @@ def extract_residual_kwargs(model, control):
 
 
 def no_control(model):
-    # Dirty hack to get the expected input shape when doing partial ControlNet
-    # 0.18215 is the latent scale factor (IDK, it kinda works)
-    # TODO: Find a better way to do this or tweak the values
-
-    logger.warning(
-        "No ControlNet input, despite the model supports it. "
-        "Using random noise as ControlNet residuals. "
-        "For better results, please use a ControlNet or a model "
-        "that does not support ControlNet."
-    )
-    residuals_names = [
-        name
-        for name in model.expected_inputs.keys()
-        if name.startswith("additional_residual")
-    ]
+    expected = model.expected_inputs
     residual_kwargs = {
-        "additional_residual_{}".format(i): 0.18215
-        * torch.randn(
-            *model.expected_inputs["additional_residual_{}".format(i)]["shape"]
-        )
-        .cpu()
-        .numpy()
-        .astype(dtype=np.float16)
-        for i in range(len(residuals_names))
+        k: torch.zeros(*expected[k]["shape"]).cpu().numpy().astype(dtype=np.float16)
+        for k in model.expected_inputs.keys()
+        if k.startswith("additional_residual")
     }
     return residual_kwargs
 
