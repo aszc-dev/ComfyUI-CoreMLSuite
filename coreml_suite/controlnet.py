@@ -5,7 +5,6 @@ import numpy as np
 import torch
 
 from coreml_suite.latents import chunk_batch
-from coreml_suite.logger import logger
 
 
 def expand_inputs(inputs):
