@@ -21,7 +21,8 @@ class CoreMLConverterLCM:
                                      ComputeUnit.CPU_AND_GPU.name,
                                      ComputeUnit.ALL.name,
                                      ComputeUnit.CPU_ONLY.name,
-                                 ],)
+                                 ],),
+                "controlnet_support": ("BOOLEAN", {"default": False}),
             }
         }
 
@@ -29,7 +30,7 @@ class CoreMLConverterLCM:
     RETURN_NAMES = ("coreml_model",)
     FUNCTION = "convert"
 
-    def convert(self, height, width, batch_size, compute_unit):
+    def convert(self, height, width, batch_size, compute_unit, controlnet_support):
         """Converts a LCM model to Core ML.
 
         Args:
@@ -48,14 +49,15 @@ class CoreMLConverterLCM:
         w = width
         sample_size = (h // 8, w // 8)
         batch_size = batch_size
+        cn_support_str = "_cn" if controlnet_support else ""
 
-        out_name = f"{lcm_converter.MODEL_NAME}_{w}x{h}_batch{batch_size}"
+        out_name = f"{lcm_converter.MODEL_NAME}_{batch_size}x{w}x{h}{cn_support_str}"
 
         out_path = lcm_converter.get_out_path("unet", f"{out_name}")
 
         if not os.path.exists(out_path):
             lcm_converter.convert(
-                out_path=out_path, sample_size=sample_size, batch_size=batch_size
+                out_path=out_path, sample_size=sample_size, batch_size=batch_size, controlnet_support=controlnet_support
             )
         target_path = lcm_converter.compile_model(out_path=out_path, out_name=out_name)
 
