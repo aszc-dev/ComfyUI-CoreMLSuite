@@ -39,7 +39,7 @@ class CoreMLModelWrapper(BaseModel):
         control=None,
         transformer_options={},
     ):
-        chunked_in = self._chunk_inputs(x, t, c_crossattn, control)
+        chunked_in = self.chunk_inputs(x, t, c_crossattn, control)
         chunked_out = [
             self._apply_model(
                 x, t, c_concat, c_crossattn, c_adm, control, transformer_options
@@ -83,19 +83,19 @@ class CoreMLModelWrapper(BaseModel):
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
         return torch.from_numpy(np_out).to(x.device)
 
-    @property
-    def expected_inputs(self):
-        return self.diffusion_model.expected_inputs
-
-    def _chunk_inputs(self, x, t, c_crossattn, control):
-        sample_shape = self.diffusion_model.expected_inputs["sample"]["shape"]
-        timestep_shape = self.diffusion_model.expected_inputs["timestep"]["shape"]
-        hidden_shape = self.diffusion_model.expected_inputs["encoder_hidden_states"][
-            "shape"
-        ]
+    def chunk_inputs(self, x, t, c_crossattn, control):
+        sample_shape = self.expected_inputs["sample"]["shape"]
+        timestep_shape = self.expected_inputs["timestep"]["shape"]
+        hidden_shape = self.expected_inputs["encoder_hidden_states"]["shape"]
         context_shape = (hidden_shape[0], hidden_shape[3], hidden_shape[1])
+
         chunked_x = chunk_batch(x, sample_shape)
         ts = list(torch.full((len(chunked_x), timestep_shape[0]), t[0]))
         chunked_context = chunk_batch(c_crossattn, context_shape)
-        chunked_control = chunk_control(control, x.shape[0])
+        chunked_control = chunk_control(control, sample_shape[0])
+
         return chunked_x, ts, chunked_context, chunked_control
+
+    @property
+    def expected_inputs(self):
+        return self.diffusion_model.expected_inputs
