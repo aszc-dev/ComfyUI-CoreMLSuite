@@ -41,9 +41,7 @@ class CoreMLModelWrapper(BaseModel):
     ):
         chunked_in = self.chunk_inputs(x, t, c_crossattn, control)
         chunked_out = [
-            self._apply_model(
-                x, t, c_concat, c_crossattn, c_adm, control, transformer_options
-            )
+            self._apply_model(x, t, c_crossattn, control)
             for x, t, c_crossattn, control in zip(*chunked_in)
         ]
 
@@ -104,13 +102,6 @@ class CoreMLModelWrapperLCM(CoreMLModelWrapper):
     def __init__(self, model_config, coreml_model):
         super().__init__(model_config, coreml_model)
         self.config = None
-
-    def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
-                     control=None, transformer_options={}):
-        model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
-
-        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return torch.from_numpy(np_out).to(x.device)
 
     def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
         return (self.apply_model(latents, ts, c_crossattn=encoder_hidden_states),)

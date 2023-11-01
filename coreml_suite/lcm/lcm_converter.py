@@ -98,7 +98,7 @@ def load_coreml_model(out_path):
 
 
 def convert_to_coreml(
-        submodule_name, torchscript_module, sample_inputs, output_names, out_path
+    submodule_name, torchscript_module, sample_inputs, output_names, out_path
 ):
     if os.path.exists(out_path):
         logger.info(f"Skipping export because {out_path} already exists")
@@ -171,6 +171,7 @@ def get_unet_inputs_spec(sample_unet_inputs):
 
 def add_cnet_support(sample_shape, reference_unet):
     from python_coreml_stable_diffusion.unet import calculate_conv2d_output_shape
+
     additional_residuals_shapes = []
 
     batch_size = sample_shape[0]
@@ -183,27 +184,32 @@ def add_cnet_support(sample_shape, reference_unet):
         reference_unet.conv_in,
     )
     additional_residuals_shapes.append(
-        (batch_size, reference_unet.conv_in.out_channels, out_h, out_w))
+        (batch_size, reference_unet.conv_in.out_channels, out_h, out_w)
+    )
 
     # down_blocks
     for down_block in reference_unet.down_blocks:
         additional_residuals_shapes += [
-            (batch_size, resnet.out_channels, out_h, out_w) for resnet in
-            down_block.resnets
+            (batch_size, resnet.out_channels, out_h, out_w)
+            for resnet in down_block.resnets
         ]
-        if hasattr(down_block,
-                   "downsamplers") and down_block.downsamplers is not None:
+        if hasattr(down_block, "downsamplers") and down_block.downsamplers is not None:
             for downsampler in down_block.downsamplers:
-                out_h, out_w = calculate_conv2d_output_shape(out_h, out_w,
-                                                             downsampler.conv)
+                out_h, out_w = calculate_conv2d_output_shape(
+                    out_h, out_w, downsampler.conv
+                )
             additional_residuals_shapes.append(
-                (batch_size, down_block.downsamplers[-1].conv.out_channels, out_h,
-                 out_w))
+                (
+                    batch_size,
+                    down_block.downsamplers[-1].conv.out_channels,
+                    out_h,
+                    out_w,
+                )
+            )
 
     # mid_block
     additional_residuals_shapes.append(
-        (
-            batch_size, reference_unet.mid_block.resnets[-1].out_channels, out_h, out_w)
+        (batch_size, reference_unet.mid_block.resnets[-1].out_channels, out_h, out_w)
     )
 
     additional_inputs = {}
@@ -215,8 +221,10 @@ def add_cnet_support(sample_shape, reference_unet):
 
 
 def convert(
-        out_path: str, batch_size: int = 1, sample_size: tuple[int, int] = (64, 64),
-        controlnet_support: bool = False
+    out_path: str,
+    batch_size: int = 1,
+    sample_size: tuple[int, int] = (64, 64),
+    controlnet_support: bool = False,
 ):
     coreml_unet, ref_unet = get_unets()
 
@@ -244,7 +252,9 @@ def convert(
 
     logger.info(f"Sample UNet inputs spec: {sample_inputs_spec}")
     logger.info("JIT tracing..")
-    traced_unet = torch.jit.trace(coreml_unet, example_inputs=list(sample_inputs.values()))
+    traced_unet = torch.jit.trace(
+        coreml_unet, example_inputs=list(sample_inputs.values())
+    )
     logger.info("Done.")
 
     coreml_sample_inputs = get_coreml_inputs(sample_inputs)

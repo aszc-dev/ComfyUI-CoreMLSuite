@@ -16,12 +16,14 @@ class CoreMLConverterLCM:
                 "height": ("INT", {"default": 512, "min": 512, "max": 768, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 512, "max": 768, "step": 8}),
                 "batch_size": ("INT", {"default": 4, "min": 1, "max": 64}),
-                "compute_unit": ([
-                                     ComputeUnit.CPU_AND_NE.name,
-                                     ComputeUnit.CPU_AND_GPU.name,
-                                     ComputeUnit.ALL.name,
-                                     ComputeUnit.CPU_ONLY.name,
-                                 ],),
+                "compute_unit": (
+                    [
+                        ComputeUnit.CPU_AND_NE.name,
+                        ComputeUnit.CPU_AND_GPU.name,
+                        ComputeUnit.ALL.name,
+                        ComputeUnit.CPU_ONLY.name,
+                    ],
+                ),
                 "controlnet_support": ("BOOLEAN", {"default": False}),
             }
         }
@@ -57,7 +59,10 @@ class CoreMLConverterLCM:
 
         if not os.path.exists(out_path):
             lcm_converter.convert(
-                out_path=out_path, sample_size=sample_size, batch_size=batch_size, controlnet_support=controlnet_support
+                out_path=out_path,
+                sample_size=sample_size,
+                batch_size=batch_size,
+                controlnet_support=controlnet_support,
             )
         target_path = lcm_converter.compile_model(out_path=out_path, out_name=out_name)
 

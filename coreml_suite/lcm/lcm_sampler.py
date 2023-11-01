@@ -42,13 +42,13 @@ class CoreMLSamplerLCM_Simple:
     CATEGORY = "sampling"
 
     def sample(
-            self,
-            coreml_model,
-            seed,
-            steps,
-            cfg,
-            positive_prompt,
-            num_images,
+        self,
+        coreml_model,
+        seed,
+        steps,
+        cfg,
+        positive_prompt,
+        num_images,
     ):
         height = coreml_model.expected_inputs["sample"]["shape"][2] * 8
         width = coreml_model.expected_inputs["sample"]["shape"][3] * 8
