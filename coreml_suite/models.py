@@ -48,8 +48,7 @@ class CoreMLModelWrapper(BaseModel):
         merged_out = merge_chunks(chunked_out, x.shape)
         return merged_out
 
-    def _apply_model(self, x, t, c_concat=None, c_crossattn=None, c_adm=None,
-                     control=None, transformer_options={}):
+    def _apply_model(self, x, t, c_crossattn, control=None):
         model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control)
 
         np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
