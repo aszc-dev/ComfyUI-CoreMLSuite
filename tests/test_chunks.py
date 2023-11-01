@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 
 import torch
@@ -5,6 +7,25 @@ import torch
 from comfy.model_management import get_torch_device
 from coreml_suite.latents import chunk_batch, merge_chunks
 from coreml_suite.controlnet import chunk_control
+from coreml_suite.models import CoreMLModelWrapper, get_model_config
+
+
+@pytest.fixture
+def coreml_model():
+    model = mock.Mock()
+    model.expected_inputs = {
+        "sample": {"shape": (2, 4, 64, 64)},
+        "timestep": {"shape": (2,)},
+        "encoder_hidden_states": {"shape": (2, 768, 1, 77)},
+        "additional_residual_0": {"shape": (2, 320, 64, 64)},
+        "additional_residual_1": {"shape": (2, 640, 32, 32)},
+    }
+    return model
+
+
+@pytest.fixture
+def model_config():
+    return get_model_config()
 
 
 @pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])
@@ -36,6 +57,7 @@ def test_merge_chunks(batch_size):
 @pytest.mark.parametrize(
     "b, target_size, num_chunks",
     [
+        (1, 2, 1),
         (1, 1, 1),
         (2, 2, 1),
         (3, 2, 2),
@@ -71,3 +93,31 @@ def test_chunking_no_control():
     chunked = chunk_control(cn, target_size)
 
     assert chunked == [None, None]
+
+
+def test_chunking_inputs(coreml_model, model_config):
+    model = CoreMLModelWrapper(model_config, coreml_model)
+    x = torch.randn(1, 4, 64, 64).to(get_torch_device())
+    t = torch.randn([1]).to(get_torch_device())
+    c_crossattn = torch.randn(1, 77, 768).to(get_torch_device())
+    control = {
+        "output": [
+            torch.randn(1, 320, 64, 64).to(get_torch_device()),
+            torch.randn(1, 640, 32, 32).to(get_torch_device()),
+        ],
+    }
+
+    chunked_x, ts, chunked_context, chunked_control = model.chunk_inputs(
+        x, t, c_crossattn, control
+    )
+
+    assert len(chunked_x) == 1
+    assert len(ts) == 1
+    assert len(chunked_context) == 1
+    assert len(chunked_control) == 1
+
+    assert chunked_x[0].shape == (2, 4, 64, 64)
+    assert ts[0].shape == (2,)
+    assert chunked_context[0].shape == (2, 77, 768)
+    assert chunked_control[0]["output"][0].shape == (2, 320, 64, 64)
+    assert chunked_control[0]["output"][1].shape == (2, 640, 32, 32)
