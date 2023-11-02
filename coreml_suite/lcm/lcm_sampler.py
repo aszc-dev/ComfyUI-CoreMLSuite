@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from diffusers.utils.torch_utils import randn_tensor
 
 import comfy.utils
 import latent_preview
@@ -141,17 +142,49 @@ class CoreMLSamplerLCM(CoreMLSampler):
         return self._sample(patched_model, steps, cfg, positive, latent_image, denoise)
 
     def _sample(self, model, steps, cfg, positive, latent_image, denoise):
+        device = get_torch_device()
         batch_size = latent_image["samples"].shape[0]
+        # callback = latent_preview.prepare_callback(model, steps, None)
 
+        prompt_embeds = self.prepare_prompt_embeds(batch_size, positive)
+
+        timesteps = self.prepare_timesteps(denoise, device, steps)
+
+        latents = self.prepare_latents(latent_image, device)
+
+        w = torch.tensor(cfg).repeat(batch_size)
+        w_embedding = self.get_w_embedding(w, embedding_dim=256).to(
+            device=device, dtype=latents.dtype
+        )
+
+        # LCM MultiStep Sampling Loop:
+        for i, t in enumerate(timesteps):
+            ts = torch.full((batch_size,), t, device=device, dtype=torch.float16)
+
+            model_pred = model.model(
+                latents,
+                ts,
+                encoder_hidden_states=prompt_embeds,
+                timestep_cond=w_embedding,
+            )[0]
+
+            # compute the previous noisy sample x_t -> x_t-1
+            latents, denoised = self.scheduler.step(
+                model_pred, i, t, latents, return_dict=False
+            )
+
+        denoised = denoised.to(get_torch_device())
+
+        return ({"samples": denoised / 0.1825},)
+
+    def prepare_prompt_embeds(self, batch_size, positive):
         bs_embed, seq_len, _ = positive.shape
         # duplicate text embeddings for each generation per prompt, using mps friendly method
         prompt_embeds = positive.repeat(1, batch_size, 1)
         prompt_embeds = prompt_embeds.view(bs_embed * batch_size, seq_len, -1)
+        return prompt_embeds
 
-        device = get_torch_device()
-        # callback = latent_preview.prepare_callback(model, steps, None)
-
-        # Prepare timesteps
+    def prepare_timesteps(self, denoise, device, steps):
         lcm_origin_steps = 50
         self.scheduler.num_inference_steps = steps
         c = self.scheduler.config.num_train_timesteps // lcm_origin_steps
@@ -162,49 +195,48 @@ class CoreMLSamplerLCM(CoreMLSampler):
         timesteps = lcm_origin_timesteps[::-skipping_step][:steps]
         timesteps = torch.from_numpy(timesteps.copy()).to(device)
         self.scheduler.timesteps = timesteps
-
         timesteps = self.scheduler.timesteps
-
-        # Prepare latent variable
-        latents = self.prepare_latents(latent_image, device)
-
-        # LCM MultiStep Sampling Loop:
-        progress_bar = comfy.utils.ProgressBar(total=steps)
-        for i, t in enumerate(timesteps):
-            ts = torch.full((batch_size,), t, device=device, dtype=torch.float16)
-
-            # model prediction (v-prediction, eps, x)
-            model_pred = model.model(
-                latents,
-                ts,
-                encoder_hidden_states=prompt_embeds,
-            )[0]
-
-            # model_pred *= cfg
-
-            # compute the previous noisy sample x_t -> x_t-1
-            latents, denoised = self.scheduler.step(
-                model_pred, i, t, latents, return_dict=False
-            )
-
-            # # call the callback, if provided
-            # if i == len(timesteps) - 1:
-            # callback(i, t, latents, steps)
-
-        denoised = denoised.to(get_torch_device())
-
-        return ({"samples": denoised / 0.1825},)
+        return timesteps
 
     def prepare_latents(self, latent_image, device):
-        latent = latent_image["samples"]
+        latent = latent_image["samples"].to(device) * 0.1825
+        latent = latent.to(torch.float16)
+
         if not torch.any(latent):
             latents = torch.randn(latent.shape, dtype=torch.float16).to(device)
             latents *= self.scheduler.init_noise_sigma
             return latents
 
         batch_size = latent.shape[0]
-        noise = torch.randn(latent.shape, dtype=torch.float16).cpu()
+
+        burned = randn_tensor(latent.shape, device=device, dtype=torch.float16)
+        noise = randn_tensor(latent.shape, device=device, dtype=torch.float16)
+
         latent_timestep = self.scheduler.timesteps[:1].repeat(batch_size)
         latents = self.scheduler.add_noise(latent, noise, latent_timestep)
 
         return latents
+
+    def get_w_embedding(self, w, embedding_dim=512, dtype=torch.float32):
+        """
+        see https://github.com/google-research/vdm/blob/dc27b98a554f65cdc654b800da5aa1846545d41b/model_vdm.py#L298
+        Args:
+        timesteps: torch.Tensor: generate embedding vectors at these timesteps
+        embedding_dim: int: dimension of the embeddings to generate
+        dtype: data type of the generated embeddings
+
+        Returns:
+        embedding vectors with shape `(len(timesteps), embedding_dim)`
+        """
+        assert len(w.shape) == 1
+        w = w * 1000.0
+
+        half_dim = embedding_dim // 2
+        emb = torch.log(torch.tensor(10000.0)) / (half_dim - 1)
+        emb = torch.exp(torch.arange(half_dim, dtype=dtype) * -emb)
+        emb = w.to(dtype)[:, None] * emb[None, :]
+        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
+        if embedding_dim % 2 == 1:  # zero pad
+            emb = torch.nn.functional.pad(emb, (0, 1))
+        assert emb.shape == (w.shape[0], embedding_dim)
+        return emb

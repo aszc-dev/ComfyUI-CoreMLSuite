@@ -7,9 +7,8 @@ import gc
 import numpy as np
 import torch
 from diffusers import UNet2DConditionModel
-from python_coreml_stable_diffusion.unet import (
-    UNet2DConditionModel as CoreMLUNet2DConditionModel,
-)
+from coreml_suite.lcm.unet import UNet2DConditionModelLCM
+
 from transformers import CLIPTextModel
 import coremltools as ct
 
@@ -36,9 +35,7 @@ def get_unets():
         low_cpu_mem_usage=False,
     )
 
-    ref_config = ref_unet.config
-
-    cml_unet = CoreMLUNet2DConditionModel().eval()
+    cml_unet = UNet2DConditionModelLCM.from_config(ref_unet.config).eval()
     cml_unet.load_state_dict(ref_unet.state_dict(), strict=False)
 
     return cml_unet, ref_unet
@@ -152,11 +149,12 @@ def get_sample_input(batch_size, encoder_hidden_states_shape, sample_shape, sche
             ("sample", torch.rand(*sample_shape)),
             (
                 "timestep",
-                torch.tensor([scheduler.timesteps[0].item()] * (batch_size)).to(
+                torch.tensor([scheduler.timesteps[0].item()] * batch_size).to(
                     torch.float32
                 ),
             ),
             ("encoder_hidden_states", torch.rand(*encoder_hidden_states_shape)),
+            ("timestep_cond", torch.randn(batch_size, 256).to(torch.float32)),
         ]
     )
     return sample_unet_inputs
