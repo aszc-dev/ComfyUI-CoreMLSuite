@@ -92,7 +92,10 @@ class CoreMLModelWrapper(BaseModel):
         chunked_x = chunk_batch(x, sample_shape)
         ts = list(torch.full((len(chunked_x), timestep_shape[0]), t[0]))
         chunked_context = chunk_batch(c_crossattn, context_shape)
-        chunked_control = chunk_control(control, sample_shape[0])
+
+        chunked_control = [None] * len(chunked_x)
+        if control is not None:
+            chunked_control = chunk_control(control, sample_shape[0])
 
         return chunked_x, ts, chunked_context, chunked_control
 
