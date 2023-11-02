@@ -243,6 +243,7 @@ class LatentConsistencyModelPipeline(DiffusionPipeline):
                 latents = latents.to(prompt_embeds.dtype)
 
                 # model prediction (v-prediction, eps, x)
+                print("latents", latents.shape)
                 model_pred = self.unet(
                     latents,
                     ts,
@@ -251,6 +252,7 @@ class LatentConsistencyModelPipeline(DiffusionPipeline):
                     cross_attention_kwargs=cross_attention_kwargs,
                     return_dict=False,
                 )[0]
+                print("model_pred", model_pred.shape)
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents, denoised = self.scheduler.step(
