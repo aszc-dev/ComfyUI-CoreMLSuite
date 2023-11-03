@@ -1,4 +1,3 @@
-from diffusers.configuration_utils import register_to_config
 from overrides import overrides
 from python_coreml_stable_diffusion.unet import UNet2DConditionModel, TimestepEmbedding
 
