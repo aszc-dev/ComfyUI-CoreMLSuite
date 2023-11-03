@@ -15,7 +15,7 @@ class CoreMLConverterLCM:
             "required": {
                 "height": ("INT", {"default": 512, "min": 512, "max": 768, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 512, "max": 768, "step": 8}),
-                "batch_size": ("INT", {"default": 4, "min": 1, "max": 64}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
                 "compute_unit": (
                     [
                         ComputeUnit.CPU_AND_NE.name,
