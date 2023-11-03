@@ -24,7 +24,7 @@ class CoreMLConverterLCM:
                         ComputeUnit.CPU_ONLY.name,
                     ],
                 ),
-                # "controlnet_support": ("BOOLEAN", {"default": False}),
+                "controlnet_support": ("BOOLEAN", {"default": False}),
             }
         }
 
@@ -32,9 +32,7 @@ class CoreMLConverterLCM:
     RETURN_NAMES = ("coreml_model",)
     FUNCTION = "convert"
 
-    def convert(
-        self, height, width, batch_size, compute_unit, controlnet_support=False
-    ):
+    def convert(self, height, width, batch_size, compute_unit, controlnet_support):
         """Converts a LCM model to Core ML.
 
         Args:

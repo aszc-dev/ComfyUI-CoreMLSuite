@@ -51,7 +51,8 @@ class CoreMLSampler(KSampler):
         if latent_image is None:
             logger.warning("No latent image provided, using empty tensor.")
             expected = coreml_model.expected_inputs["sample"]["shape"]
-            latent_image = {"samples": torch.zeros(expected[0] // 2, *expected[1:])}
+            batch_size = max(expected[0] // 2, 1)
+            latent_image = {"samples": torch.zeros(batch_size, *expected[1:])}
 
         return super().sample(
             model_patcher,
