@@ -18,6 +18,7 @@ class CoreMLSamplerLCM(CoreMLSampler):
     @classmethod
     def INPUT_TYPES(s):
         old_required = CoreMLSampler.INPUT_TYPES()["required"].copy()
+        old_required["steps"][1]["default"] = 4
         old_required.pop("negative")
         old_required.pop("sampler_name")
         old_required.pop("scheduler")
