@@ -38,32 +38,29 @@ class CoreMLModelWrapper(BaseModel):
         c_adm=None,
         control=None,
         transformer_options={},
+        **kwargs,
     ):
-        chunked_in = self.chunk_inputs(x, t, c_crossattn, control)
+        chunked_in = self.chunk_inputs(
+            x, t, c_crossattn, control, kwargs.get("timestep_cond")
+        )
         chunked_out = [
-            self._apply_model(
-                x, t, c_concat, c_crossattn, c_adm, control, transformer_options
-            )
-            for x, t, c_crossattn, control in zip(*chunked_in)
+            self._apply_model(x, t, c_crossattn, control, ts_cond)
+            for x, t, c_crossattn, control, ts_cond in zip(*chunked_in)
         ]
-
         merged_out = merge_chunks(chunked_out, x.shape)
         return merged_out
+
+    def _apply_model(self, x, t, c_crossattn, control=None, ts_cond=None):
+        model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control, ts_cond)
+
+        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
+        return torch.from_numpy(np_out).to(x.device)
 
     def get_dtype(self):
         # Hardcoding torch-compatible dtype (used for memory allocation)
         return torch.float16
 
-    def _apply_model(
-        self,
-        x,
-        t,
-        c_concat=None,
-        c_crossattn=None,
-        c_adm=None,
-        control=None,
-        transformer_options={},
-    ):
+    def prepare_inputs(self, x, t, c_crossattn, control, ts_cond=None):
         sample = x.cpu().numpy().astype(np.float16)
 
         context = c_crossattn.cpu().numpy().astype(np.float16)
@@ -78,12 +75,15 @@ class CoreMLModelWrapper(BaseModel):
         }
         residual_kwargs = extract_residual_kwargs(self.diffusion_model, control)
         model_input_kwargs |= residual_kwargs
-        # model_input_kwargs = expand_inputs(model_input_kwargs)
 
-        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return torch.from_numpy(np_out).to(x.device)
+        if ts_cond is not None:
+            model_input_kwargs["timestep_cond"] = (
+                ts_cond.cpu().numpy().astype(np.float16)
+            )
 
-    def chunk_inputs(self, x, t, c_crossattn, control):
+        return model_input_kwargs
+
+    def chunk_inputs(self, x, t, c_crossattn, control, ts_cond=None):
         sample_shape = self.expected_inputs["sample"]["shape"]
         timestep_shape = self.expected_inputs["timestep"]["shape"]
         hidden_shape = self.expected_inputs["encoder_hidden_states"]["shape"]
@@ -97,8 +97,29 @@ class CoreMLModelWrapper(BaseModel):
         if control is not None:
             chunked_control = chunk_control(control, sample_shape[0])
 
-        return chunked_x, ts, chunked_context, chunked_control
+        chunked_ts_cond = [None] * len(chunked_x)
+        if ts_cond is not None:
+            ts_cond_shape = self.expected_inputs["timestep_cond"]["shape"]
+            chunked_ts_cond = chunk_batch(ts_cond, ts_cond_shape)
+
+        return chunked_x, ts, chunked_context, chunked_control, chunked_ts_cond
 
     @property
     def expected_inputs(self):
         return self.diffusion_model.expected_inputs
+
+    def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
+        return (
+            self.apply_model(latents, ts, c_crossattn=encoder_hidden_states, **kwargs),
+        )
+
+
+class CoreMLModelWrapperLCM(CoreMLModelWrapper):
+    def __init__(self, model_config, coreml_model):
+        super().__init__(model_config, coreml_model)
+        self.config = None
+
+    def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
+        return (
+            self.apply_model(latents, ts, c_crossattn=encoder_hidden_states, **kwargs),
+        )
