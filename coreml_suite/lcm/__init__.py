@@ -1,4 +1,4 @@
-from .lcm_sampler import CoreMLSamplerLCM, CoreMLSamplerLCM_Simple
+from .lcm_sampler import CoreMLSamplerLCM
 from .nodes import CoreMLConverterLCM
 
-__all__ = ["CoreMLSamplerLCM", "CoreMLSamplerLCM_Simple", "CoreMLConverterLCM"]
+__all__ = ["CoreMLSamplerLCM", "CoreMLConverterLCM"]
