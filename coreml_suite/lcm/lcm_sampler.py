@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 from diffusers.utils.torch_utils import randn_tensor
+from tqdm import tqdm
 
 import comfy.utils
 import latent_preview
@@ -137,14 +138,18 @@ class CoreMLSamplerLCM(CoreMLSampler):
 
         positive = positive[0][0]
 
+        callback = latent_preview.prepare_callback(patched_model, steps, None)
         torch.manual_seed(seed)
 
-        return self._sample(patched_model, steps, cfg, positive, latent_image, denoise)
+        return self._sample(
+            patched_model, steps, cfg, positive, latent_image, denoise, callback
+        )
 
-    def _sample(self, model, steps, cfg, positive, latent_image, denoise):
+    def _sample(
+        self, model, steps, cfg, positive, latent_image, denoise, callback=None
+    ):
         device = get_torch_device()
         batch_size = latent_image["samples"].shape[0]
-        # callback = latent_preview.prepare_callback(model, steps, None)
 
         prompt_embeds = self.prepare_prompt_embeds(batch_size, positive)
 
@@ -158,7 +163,8 @@ class CoreMLSamplerLCM(CoreMLSampler):
         )
 
         # LCM MultiStep Sampling Loop:
-        for i, t in enumerate(timesteps):
+        iterator = tqdm(timesteps, desc="Core ML LCM Sampler", total=steps)
+        for i, t in enumerate(iterator):
             ts = torch.full((batch_size,), t, device=device, dtype=torch.float16)
 
             model_pred = model.model(
@@ -172,6 +178,9 @@ class CoreMLSamplerLCM(CoreMLSampler):
             latents, denoised = self.scheduler.step(
                 model_pred, i, t, latents, return_dict=False
             )
+
+            if callback:
+                callback(i, denoised, latents, steps)
 
         denoised = denoised.to(get_torch_device())
 
