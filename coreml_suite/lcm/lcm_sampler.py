@@ -36,7 +36,8 @@ class CoreMLSamplerLCM(CoreMLSampler):
 
     def __init__(self):
         self.scheduler = LCMScheduler.from_pretrained(
-            os.path.join(os.path.dirname(__file__), "scheduler_config.json")
+            "SimianLuo/LCM_Dreamshaper_v7",
+            subfolder="scheduler"
         )
 
     def sample(
