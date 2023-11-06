@@ -1,3 +1,4 @@
 git+https://github.com/apple/ml-stable-diffusion.git
 coremltools
 overrides
+diffusers
