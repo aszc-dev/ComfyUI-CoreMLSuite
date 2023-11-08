@@ -11,13 +11,13 @@ from coreml_suite.models import (
     CoreMLModelWrapper,
     get_model_config,
     CoreMLModelWrapperLCM,
+    CoreMLInputs,
 )
 
 
 @pytest.fixture
-def coreml_model():
-    model = mock.Mock()
-    model.expected_inputs = {
+def expected_inputs():
+    expected = {
         "sample": {"shape": (2, 4, 64, 64)},
         "timestep": {"shape": (2,)},
         "timestep_cond": {"shape": (2, 256)},
@@ -25,7 +25,7 @@ def coreml_model():
         "additional_residual_0": {"shape": (2, 320, 64, 64)},
         "additional_residual_1": {"shape": (2, 640, 32, 32)},
     }
-    return model
+    return expected
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def inputs():
     }
     timestep_cond = torch.randn(1, 256).to(get_torch_device())
 
-    return x, t, c_crossattn, control, timestep_cond
+    return CoreMLInputs(x, t, c_crossattn, control, timestep_cond=timestep_cond)
 
 
 @pytest.mark.parametrize(
@@ -116,22 +116,14 @@ def test_chunking_no_control():
     assert chunked == [None, None]
 
 
-def test_chunking_inputs(coreml_model, model_config, inputs):
-    model = CoreMLModelWrapper(model_config, coreml_model)
+def test_chunking_inputs(expected_inputs, inputs):
+    chunked = inputs.chunks(expected_inputs)
 
-    chunked_x, ts, chunked_context, chunked_cn, chunked_ts_cond = model.chunk_inputs(
-        *inputs
-    )
+    assert len(chunked) == 1
 
-    assert len(chunked_x) == 1
-    assert len(ts) == 1
-    assert len(chunked_context) == 1
-    assert len(chunked_cn) == 1
-    assert len(chunked_ts_cond) == 1
-
-    assert chunked_x[0].shape == (2, 4, 64, 64)
-    assert ts[0].shape == (2,)
-    assert chunked_context[0].shape == (2, 77, 768)
-    assert chunked_cn[0]["output"][0].shape == (2, 320, 64, 64)
-    assert chunked_cn[0]["output"][1].shape == (2, 640, 32, 32)
-    assert chunked_ts_cond[0].shape == (2, 256)
+    assert chunked[0].x.shape == (2, 4, 64, 64)
+    assert chunked[0].t.shape == (2,)
+    assert chunked[0].context.shape == (2, 77, 768)
+    assert chunked[0].control["output"][0].shape == (2, 320, 64, 64)
+    assert chunked[0].control["output"][1].shape == (2, 640, 32, 32)
+    assert chunked[0].ts_cond.shape == (2, 256)

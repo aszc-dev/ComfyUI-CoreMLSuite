@@ -21,11 +21,11 @@ def expand_inputs(inputs):
     return expanded
 
 
-def extract_residual_kwargs(model, control):
-    if "additional_residual_0" not in model.expected_inputs.keys():
+def extract_residual_kwargs(expected_inputs, control):
+    if "additional_residual_0" not in expected_inputs.keys():
         return {}
     if control is None:
-        return no_control(model)
+        return no_control(expected_inputs)
 
     residual_kwargs = {
         "additional_residual_{}".format(i): r.cpu().numpy().astype(np.float16)
@@ -34,12 +34,13 @@ def extract_residual_kwargs(model, control):
     return residual_kwargs
 
 
-def no_control(model):
-    expected = model.expected_inputs
+def no_control(expected_inputs):
+    shapes_dict = {
+        k: v["shape"] for k, v in expected_inputs.items() if k.startswith("additional")
+    }
     residual_kwargs = {
-        k: torch.zeros(*expected[k]["shape"]).cpu().numpy().astype(dtype=np.float16)
-        for k in model.expected_inputs.keys()
-        if k.startswith("additional_residual")
+        k: torch.zeros(*shape).cpu().numpy().astype(dtype=np.float16)
+        for k, shape in shapes_dict.items()
     }
     return residual_kwargs
 
