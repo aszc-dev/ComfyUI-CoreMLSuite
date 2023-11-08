@@ -3,7 +3,6 @@ import torch
 
 from comfy import supported_models_base
 from comfy.latent_formats import SD15
-from comfy.model_base import BaseModel
 
 from coreml_suite.controlnet import extract_residual_kwargs, chunk_control
 from coreml_suite.latents import chunk_batch, merge_chunks
@@ -26,42 +25,29 @@ def get_model_config():
 
 class CoreMLModelWrapper:
     def __init__(self, coreml_model):
-        self.diffusion_model = coreml_model
+        self.coreml_model = coreml_model
         self.dtype = torch.float16
 
-    def apply_model(
-        self,
-        x,
-        t,
-        c_crossattn=None,
-        control=None,
-        transformer_options={},
-        **kwargs,
-    ):
+    def __call__(self, x, t, context, control, transformer_options, **kwargs):
         chunked_in = self.chunk_inputs(
-            x, t, c_crossattn, control, kwargs.get("timestep_cond")
+            x, t, context, control, kwargs.get("timestep_cond")
         )
+        input_list = [
+            self.get_np_input_kwargs(*chunked) for chunked in zip(*chunked_in)
+        ]
+
         chunked_out = [
-            self._apply_model(x, t, c_crossattn, control, ts_cond)
-            for x, t, c_crossattn, control, ts_cond in zip(*chunked_in)
+            self.get_torch_outputs(self.coreml_model(**input_kwargs), x.device)
+            for input_kwargs in input_list
         ]
         merged_out = merge_chunks(chunked_out, x.shape)
+
         return merged_out
 
-    def _apply_model(self, x, t, c_crossattn, control=None, ts_cond=None):
-        model_input_kwargs = self.prepare_inputs(x, t, c_crossattn, control, ts_cond)
-
-        np_out = self.diffusion_model(**model_input_kwargs)["noise_pred"]
-        return torch.from_numpy(np_out).to(x.device)
-
-    def get_dtype(self):
-        # Hardcoding torch-compatible dtype (used for memory allocation)
-        return torch.float16
-
-    def prepare_inputs(self, x, t, c_crossattn, control, ts_cond=None):
+    def get_np_input_kwargs(self, x, t, context, control, ts_cond=None):
         sample = x.cpu().numpy().astype(np.float16)
 
-        context = c_crossattn.cpu().numpy().astype(np.float16)
+        context = context.cpu().numpy().astype(np.float16)
         context = context.transpose(0, 2, 1)[:, :, None, :]
 
         t = t.cpu().numpy().astype(np.float16)
@@ -71,7 +57,7 @@ class CoreMLModelWrapper:
             "encoder_hidden_states": context,
             "timestep": t,
         }
-        residual_kwargs = extract_residual_kwargs(self.diffusion_model, control)
+        residual_kwargs = extract_residual_kwargs(self.coreml_model, control)
         model_input_kwargs |= residual_kwargs
 
         if ts_cond is not None:
@@ -81,7 +67,7 @@ class CoreMLModelWrapper:
 
         return model_input_kwargs
 
-    def chunk_inputs(self, x, t, c_crossattn, control, ts_cond=None):
+    def chunk_inputs(self, x, t, context, control, ts_cond=None):
         sample_shape = self.expected_inputs["sample"]["shape"]
         timestep_shape = self.expected_inputs["timestep"]["shape"]
         hidden_shape = self.expected_inputs["encoder_hidden_states"]["shape"]
@@ -89,7 +75,7 @@ class CoreMLModelWrapper:
 
         chunked_x = chunk_batch(x, sample_shape)
         ts = list(torch.full((len(chunked_x), timestep_shape[0]), t[0]))
-        chunked_context = chunk_batch(c_crossattn, context_shape)
+        chunked_context = chunk_batch(context, context_shape)
 
         chunked_control = [None] * len(chunked_x)
         if control is not None:
@@ -102,14 +88,13 @@ class CoreMLModelWrapper:
 
         return chunked_x, ts, chunked_context, chunked_control, chunked_ts_cond
 
+    @staticmethod
+    def get_torch_outputs(model_output, device):
+        return torch.from_numpy(model_output["noise_pred"]).to(device)
+
     @property
     def expected_inputs(self):
-        return self.diffusion_model.expected_inputs
-
-    def __call__(self, latents, ts, context, control, transformer_options, **kwargs):
-        return self.apply_model(
-            latents, ts, context, control, transformer_options, **kwargs
-        )
+        return self.coreml_model.expected_inputs
 
 
 class CoreMLModelWrapperLCM(CoreMLModelWrapper):
