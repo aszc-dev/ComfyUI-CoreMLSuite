@@ -1,5 +1,3 @@
-from unittest import mock
-
 import pytest
 
 import torch
@@ -8,11 +6,9 @@ from comfy.model_management import get_torch_device
 from coreml_suite.latents import chunk_batch, merge_chunks
 from coreml_suite.controlnet import chunk_control
 from coreml_suite.models import (
-    CoreMLModelWrapper,
-    get_model_config,
-    CoreMLModelWrapperLCM,
     CoreMLInputs,
 )
+from coreml_suite.config import get_model_config
 
 
 @pytest.fixture

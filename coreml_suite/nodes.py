@@ -11,7 +11,8 @@ from comfy.model_patcher import ModelPatcher
 from coreml_suite.logger import logger
 from nodes import KSampler
 
-from coreml_suite.models import CoreMLModelWrapper, get_model_config
+from coreml_suite.models import CoreMLModelWrapper
+from coreml_suite.config import get_model_config
 
 
 class CoreMLSampler(KSampler):

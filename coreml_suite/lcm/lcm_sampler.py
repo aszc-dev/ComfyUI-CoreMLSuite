@@ -6,12 +6,14 @@ from diffusers.utils.torch_utils import randn_tensor
 from tqdm import tqdm
 
 import latent_preview
+from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite.lcm.lcm_scheduler import LCMScheduler
 from coreml_suite.logger import logger
-from coreml_suite.models import get_model_config, CoreMLModelWrapperLCM
+from coreml_suite.models import CoreMLModelWrapper
 from coreml_suite.nodes import CoreMLSampler
+from coreml_suite.config import get_model_config
 
 
 class CoreMLSamplerLCM(CoreMLSampler):
@@ -47,8 +49,10 @@ class CoreMLSamplerLCM(CoreMLSampler):
         **kwargs,
     ):
         model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapperLCM(model_config, coreml_model)
-        patched_model = ModelPatcher(wrapped_model, get_torch_device(), None)
+        wrapped_model = CoreMLModelWrapper(coreml_model)
+        model = model_base.BaseModel(model_config, device=get_torch_device())
+        model.diffusion_model = wrapped_model
+        model_patcher = ModelPatcher(model, get_torch_device(), None)
 
         if latent_image is None:
             logger.warning("No latent image provided, using empty tensor.")
@@ -57,11 +61,11 @@ class CoreMLSamplerLCM(CoreMLSampler):
 
         positive = positive[0][0]
 
-        callback = latent_preview.prepare_callback(patched_model, steps, None)
+        callback = latent_preview.prepare_callback(model_patcher, steps, None)
         torch.manual_seed(seed)
 
         return self._sample(
-            patched_model, steps, cfg, positive, latent_image, denoise, callback
+            model_patcher, steps, cfg, positive, latent_image, denoise, callback
         )
 
     def _sample(
