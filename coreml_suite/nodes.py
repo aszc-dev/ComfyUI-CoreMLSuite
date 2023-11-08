@@ -5,6 +5,7 @@ from coremltools import ComputeUnit
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
 import folder_paths
+from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite.logger import logger
@@ -41,8 +42,10 @@ class CoreMLSampler(KSampler):
         denoise=1.0,
     ):
         model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(model_config, coreml_model)
-        model = ModelPatcher(wrapped_model, get_torch_device(), None)
+        wrapped_model = CoreMLModelWrapper(coreml_model)
+        model = model_base.BaseModel(model_config, device=get_torch_device())
+        model.diffusion_model = wrapped_model
+        model_patcher = ModelPatcher(model, get_torch_device(), None)
 
         if latent_image is None:
             logger.warning("No latent image provided, using empty tensor.")
@@ -50,7 +53,7 @@ class CoreMLSampler(KSampler):
             latent_image = {"samples": torch.zeros(expected[0] // 2, *expected[1:])}
 
         return super().sample(
-            model,
+            model_patcher,
             seed,
             steps,
             cfg,
@@ -130,6 +133,8 @@ class CoreMLModelAdapter:
 
     def wrap(self, coreml_model):
         model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(model_config, coreml_model)
-        patched_model = ModelPatcher(wrapped_model, get_torch_device(), None)
-        return (patched_model,)
+        wrapped_model = CoreMLModelWrapper(coreml_model)
+        model = model_base.BaseModel(model_config, device=get_torch_device())
+        model.diffusion_model = wrapped_model
+        model_patcher = ModelPatcher(model, get_torch_device(), None)
+        return (model_patcher,)
