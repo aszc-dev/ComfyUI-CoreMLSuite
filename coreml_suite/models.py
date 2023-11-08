@@ -24,18 +24,16 @@ def get_model_config():
     return model_config
 
 
-class CoreMLModelWrapper(BaseModel):
-    def __init__(self, model_config, coreml_model):
-        super().__init__(model_config)
+class CoreMLModelWrapper:
+    def __init__(self, coreml_model):
         self.diffusion_model = coreml_model
+        self.dtype = torch.float16
 
     def apply_model(
         self,
         x,
         t,
-        c_concat=None,
         c_crossattn=None,
-        c_adm=None,
         control=None,
         transformer_options={},
         **kwargs,
@@ -108,18 +106,13 @@ class CoreMLModelWrapper(BaseModel):
     def expected_inputs(self):
         return self.diffusion_model.expected_inputs
 
-    def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
-        return (
-            self.apply_model(latents, ts, c_crossattn=encoder_hidden_states, **kwargs),
+    def __call__(self, latents, ts, context, control, transformer_options, **kwargs):
+        return self.apply_model(
+            latents, ts, context, control, transformer_options, **kwargs
         )
 
 
 class CoreMLModelWrapperLCM(CoreMLModelWrapper):
-    def __init__(self, model_config, coreml_model):
-        super().__init__(model_config, coreml_model)
+    def __init__(self, coreml_model):
+        super().__init__(coreml_model)
         self.config = None
-
-    def __call__(self, latents, ts, encoder_hidden_states, **kwargs):
-        return (
-            self.apply_model(latents, ts, c_crossattn=encoder_hidden_states, **kwargs),
-        )
