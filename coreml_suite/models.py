@@ -10,7 +10,7 @@ class CoreMLModelWrapper:
         self.coreml_model = coreml_model
         self.dtype = torch.float16
 
-    def __call__(self, x, t, context, control, transformer_options, **kwargs):
+    def __call__(self, x, t, context, control, transformer_options=None, **kwargs):
         inputs = CoreMLInputs(x, t, context, control, **kwargs)
         input_list = inputs.chunks(self.expected_inputs)
 
