@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(__file__))
 
 from coreml_suite.nodes import CoreMLLoaderUNet, CoreMLSampler, CoreMLModelAdapter
 from coreml_suite.lcm import (
-    CoreMLSamplerLCM,
+    COREML_SAMPLER_LCM,
     CoreMLConverterLCM,
 )
 
@@ -13,7 +13,7 @@ NODE_CLASS_MAPPINGS = {
     "CoreMLUNetLoader": CoreMLLoaderUNet,
     "CoreMLSampler": CoreMLSampler,
     "CoreMLModelAdapter": CoreMLModelAdapter,
-    "Core ML LCM Sampler": CoreMLSamplerLCM,
+    "Core ML LCM Sampler": COREML_SAMPLER_LCM,
     "Core ML LCM Converter": CoreMLConverterLCM,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
