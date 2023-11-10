@@ -11,14 +11,14 @@ from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite.config import get_model_config
-from coreml_suite.lcm import lcm_converter
+from coreml_suite.lcm import converter as lcm_converter
 from coreml_suite.lcm.sampler import CoreMLSamplerLCM
 from coreml_suite.logger import logger
 from coreml_suite.models import CoreMLModelWrapper
 from coreml_suite.nodes import CoreMLSampler
 
 
-class CoreMLConverterLCM:
+class COREML_CONVERT_LCM:
     """Converts a LCM model to Core ML."""
 
     @classmethod

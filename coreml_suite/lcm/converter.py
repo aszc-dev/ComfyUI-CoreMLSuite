@@ -6,14 +6,15 @@ import gc
 
 import numpy as np
 import torch
-from diffusers import UNet2DConditionModel
+from diffusers import UNet2DConditionModel, LCMScheduler
+
+from comfy.model_management import get_torch_device
 from coreml_suite.lcm.unet import UNet2DConditionModelLCM
 
 from transformers import CLIPTextModel
 import coremltools as ct
 
 from folder_paths import get_folder_paths
-from coreml_suite.lcm.lcm_scheduler import LCMScheduler
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -60,13 +61,8 @@ def get_encoder_hidden_states_shape(unet_config, batch_size):
 
 
 def get_scheduler():
-    scheduler = LCMScheduler(
-        beta_start=0.00085,
-        beta_end=0.0120,
-        beta_schedule="scaled_linear",
-        prediction_type="epsilon",
-    )
-    scheduler.set_timesteps(50, 50)
+    scheduler = LCMScheduler.from_pretrained(MODEL_VERSION, subfolder="scheduler")
+    scheduler.set_timesteps(50, get_torch_device(), 50, 1.0)
     return scheduler
 
 
