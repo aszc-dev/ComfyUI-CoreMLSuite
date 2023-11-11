@@ -2,20 +2,11 @@ import os
 
 import torch
 from coremltools import ComputeUnit
-from diffusers import LCMScheduler
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
-import comfy.utils
-import latent_preview
-from comfy import model_base
 from comfy.model_management import get_torch_device
-from comfy.model_patcher import ModelPatcher
-from coreml_suite.config import get_model_config
+from comfy_extras.nodes_model_advanced import ModelSamplingDiscreteLCM, LCM
 from coreml_suite.lcm import converter as lcm_converter
-from coreml_suite.lcm.sampler import CoreMLSamplerLCM
-from coreml_suite.logger import logger
-from coreml_suite.models import CoreMLModelWrapper
-from coreml_suite.nodes import CoreMLSampler
 
 
 class COREML_CONVERT_LCM:
@@ -81,72 +72,76 @@ class COREML_CONVERT_LCM:
         return (CoreMLModel(target_path, compute_unit, "compiled"),)
 
 
-class COREML_SAMPLER_LCM(CoreMLSampler):
-    @classmethod
-    def INPUT_TYPES(s):
-        old_required = CoreMLSampler.INPUT_TYPES()["required"].copy()
-        old_required["steps"][1]["default"] = 4
-        old_required.pop("negative")
-        old_required.pop("sampler_name")
-        old_required.pop("scheduler")
-        new_required = {"coreml_model": ("COREML_UNET",)}
-        return {
-            "required": new_required | old_required,
-            "optional": {"latent_image": ("LATENT",)},
-        }
+def get_w_embedding(w, embedding_dim=512, dtype=torch.float32):
+    """
+    see https://github.com/google-research/vdm/blob/dc27b98a554f65cdc654b800da5aa1846545d41b/model_vdm.py#L298
+    Args:
+    timesteps: torch.Tensor: generate embedding vectors at these timesteps
+    embedding_dim: int: dimension of the embeddings to generate
+    dtype: data type of the generated embeddings
 
-    CATEGORY = "Core ML Suite"
+    Returns:
+    embedding vectors with shape `(len(timesteps), embedding_dim)`
+    """
+    assert len(w.shape) == 1
+    w = w * 1000.0
 
-    def sample(
-        self,
-        coreml_model,
-        seed,
-        steps,
-        cfg,
-        positive,
-        latent_image=None,
-        denoise=1.0,
-        **kwargs,
-    ):
-        scheduler = LCMScheduler.from_pretrained(
-            "SimianLuo/LCM_Dreamshaper_v7", subfolder="scheduler"
-        )
+    half_dim = embedding_dim // 2
+    emb = torch.log(torch.tensor(10000.0)) / (half_dim - 1)
+    emb = torch.exp(torch.arange(half_dim, dtype=dtype) * -emb)
+    emb = w.to(dtype)[:, None] * emb[None, :]
+    emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
+    if embedding_dim % 2 == 1:  # zero pad
+        emb = torch.nn.functional.pad(emb, (0, 1))
+    assert emb.shape == (w.shape[0], embedding_dim)
+    return emb
 
-        model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(coreml_model)
-        model = model_base.BaseModel(model_config, device=get_torch_device())
-        model.diffusion_model = wrapped_model
-        model_patcher = ModelPatcher(model, get_torch_device(), None)
 
-        if latent_image is None:
-            logger.warning("No latent image provided, using empty tensor.")
-            expected = coreml_model.expected_inputs["sample"]["shape"]
-            latent_image = {"samples": torch.zeros(*expected).to(get_torch_device())}
+def model_function_wrapper(w_embedding):
+    def wrapper(model_function, params):
+        x = params["input"]
+        t = params["timestep"]
+        c = params["c"]
 
-        x0_output = {}
-        callback = latent_preview.prepare_callback(model_patcher, steps, x0_output)
-        disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
+        context = c.get("c_crossattn")
 
-        sampler = CoreMLSamplerLCM(scheduler)
-        samples = sampler.sample(
-            model_patcher,
-            seed,
-            steps,
-            cfg,
-            positive,
-            latent_image=latent_image,
-            denoise=denoise,
-            callback=callback,
-            disable_pbar=disable_pbar,
-        )
+        if context is None:
+            return torch.zeros_like(x)
 
-        out = latent_image.copy()
-        out["samples"] = samples
-        if "x0" in x0_output:
-            out_denoised = latent_image.copy()
-            out_denoised["samples"] = model.process_latent_out(
-                x0_output["x0"].to(get_torch_device())
-            )
-        else:
-            out_denoised = out
-        return out, out_denoised
+        return model_function(x, t, **c, timestep_cond=w_embedding)
+
+    return wrapper
+
+
+def lcm_patch(model):
+    m = model.clone()
+    sampling_type = LCM
+    sampling_base = ModelSamplingDiscreteLCM
+
+    class ModelSamplingAdvanced(sampling_base, sampling_type):
+        pass
+
+    model_sampling = ModelSamplingAdvanced()
+    m.add_object_patch("model_sampling", model_sampling)
+
+    return m
+
+
+def add_lcm_model_options(model_patcher, cfg, latent_image):
+    mp = model_patcher.clone()
+
+    latent = latent_image["samples"].to(get_torch_device())
+    batch_size = latent.shape[0]
+    dtype = latent.dtype
+    device = get_torch_device()
+
+    w = torch.tensor(cfg).repeat(batch_size)
+    w_embedding = get_w_embedding(w, embedding_dim=256).to(device=device, dtype=dtype)
+
+    model_options = {
+        "model_function_wrapper": model_function_wrapper(w_embedding),
+        "sampler_cfg_function": lambda x: x["cond"].to(device),
+    }
+    mp.model_options |= model_options
+
+    return mp

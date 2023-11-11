@@ -8,6 +8,7 @@ import folder_paths
 from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
+from coreml_suite.lcm.nodes import add_lcm_model_options, lcm_patch
 from coreml_suite.logger import logger
 from nodes import KSampler
 
@@ -42,17 +43,13 @@ class CoreMLSampler(KSampler):
         latent_image=None,
         denoise=1.0,
     ):
-        model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(coreml_model)
-        model = model_base.BaseModel(model_config, device=get_torch_device())
-        model.diffusion_model = wrapped_model
-        model_patcher = ModelPatcher(model, get_torch_device(), None)
+        model_patcher = self.get_model_patcher(coreml_model)
+        latent_image = self.get_latent_image(coreml_model, latent_image)
 
-        if latent_image is None:
-            logger.warning("No latent image provided, using empty tensor.")
-            expected = coreml_model.expected_inputs["sample"]["shape"]
-            batch_size = max(expected[0] // 2, 1)
-            latent_image = {"samples": torch.zeros(batch_size, *expected[1:])}
+        if is_lcm(coreml_model):
+            positive[0][1]["control_apply_to_uncond"] = False
+            model_patcher = add_lcm_model_options(model_patcher, cfg, latent_image)
+            model_patcher = lcm_patch(model_patcher)
 
         return super().sample(
             model_patcher,
@@ -66,6 +63,24 @@ class CoreMLSampler(KSampler):
             latent_image,
             denoise,
         )
+
+    def get_latent_image(self, coreml_model, latent_image):
+        if latent_image is not None:
+            return latent_image
+
+        logger.warning("No latent image provided, using empty tensor.")
+        expected = coreml_model.expected_inputs["sample"]["shape"]
+        batch_size = max(expected[0] // 2, 1)
+        latent_image = {"samples": torch.zeros(batch_size, *expected[1:])}
+        return latent_image
+
+    def get_model_patcher(self, coreml_model):
+        model_config = get_model_config()
+        wrapped_model = CoreMLModelWrapper(coreml_model)
+        model = model_base.BaseModel(model_config, device=get_torch_device())
+        model.diffusion_model = wrapped_model
+        model_patcher = ModelPatcher(model, get_torch_device(), None)
+        return model_patcher
 
 
 class CoreMLLoader:
@@ -140,3 +155,7 @@ class CoreMLModelAdapter:
         model.diffusion_model = wrapped_model
         model_patcher = ModelPatcher(model, get_torch_device(), None)
         return (model_patcher,)
+
+
+def is_lcm(coreml_model):
+    return "timestep_cond" in coreml_model.expected_inputs

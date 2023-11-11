@@ -1,3 +1,3 @@
-from .nodes import COREML_SAMPLER_LCM, COREML_CONVERT_LCM
+from .nodes import COREML_CONVERT_LCM
 
-__all__ = ["COREML_SAMPLER_LCM", "COREML_CONVERT_LCM"]
+__all__ = ["COREML_CONVERT_LCM"]
