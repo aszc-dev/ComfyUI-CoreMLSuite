@@ -8,7 +8,7 @@ import folder_paths
 from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
-from coreml_suite.lcm.nodes import add_lcm_model_options, lcm_patch
+from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler
 
@@ -155,7 +155,3 @@ class CoreMLModelAdapter:
         model.diffusion_model = wrapped_model
         model_patcher = ModelPatcher(model, get_torch_device(), None)
         return (model_patcher,)
-
-
-def is_lcm(coreml_model):
-    return "timestep_cond" in coreml_model.expected_inputs
