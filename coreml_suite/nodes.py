@@ -21,11 +21,12 @@ class CoreMLSampler(KSampler):
     def INPUT_TYPES(s):
         old_required = KSampler.INPUT_TYPES()["required"].copy()
         old_required.pop("model")
+        old_required.pop("negative")
         old_required.pop("latent_image")
         new_required = {"coreml_model": ("COREML_UNET",)}
         return {
             "required": new_required | old_required,
-            "optional": {"latent_image": ("LATENT",)},
+            "optional": {"negative": ("CONDITIONING",), "latent_image": ("LATENT",)},
         }
 
     CATEGORY = "Core ML Suite"
@@ -39,7 +40,7 @@ class CoreMLSampler(KSampler):
         sampler_name,
         scheduler,
         positive,
-        negative,
+        negative=None,
         latent_image=None,
         denoise=1.0,
     ):
@@ -47,9 +48,14 @@ class CoreMLSampler(KSampler):
         latent_image = self.get_latent_image(coreml_model, latent_image)
 
         if is_lcm(coreml_model):
+            negative = [[None, {}]]
             positive[0][1]["control_apply_to_uncond"] = False
             model_patcher = add_lcm_model_options(model_patcher, cfg, latent_image)
             model_patcher = lcm_patch(model_patcher)
+        else:
+            assert (
+                negative is not None
+            ), "Negative conditioning is optional only for LCM models."
 
         return super().sample(
             model_patcher,
