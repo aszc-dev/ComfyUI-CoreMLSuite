@@ -5,10 +5,14 @@ from coremltools import ComputeUnit
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
 import folder_paths
-from comfy import model_base
+from comfy import model_base, sd1_clip, sd, utils
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite import COREML_NODE
+from comfy.sd import CLIP
+from coreml_suite import converter
+from coreml_suite.clip import CoreMLCLIP, SDClipModelCoreML
+from coreml_suite.converter import ModelType
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler
@@ -159,3 +163,158 @@ class CoreMLModelAdapter:
         model.diffusion_model = wrapped_model
         model_patcher = ModelPatcher(model, get_torch_device(), None)
         return (model_patcher,)
+
+
+class COREML_LOAD_CLIP(CoreMLLoader):
+    PACKAGE_DIRNAME = "clip"
+    RETURN_TYPES = ("CLIP",)
+
+    FUNCTION = "load_clip"
+
+    def load_clip(self, coreml_name, compute_unit):
+        coreml_model = super().load(coreml_name, compute_unit)[0]
+
+        class EmptyClass:
+            pass
+
+        clip_target = EmptyClass()
+        clip_target.params = {"coreml_model": coreml_model}
+        clip_target.clip = SDClipModelCoreML
+        clip_target.tokenizer = sd1_clip.SD1Tokenizer
+        embedding_directory = folder_paths.get_folder_paths("embeddings")[0]
+
+        return (CLIP(clip_target, embedding_directory),)
+
+
+class COREML_CONVERT(COREML_NODE):
+    """Converts a LCM model to Core ML."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+                "model_type": (["SD15", "LCM"], {"default": "SD15"}),
+                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
+                "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+                "compute_unit": (
+                    [
+                        ComputeUnit.CPU_AND_NE.name,
+                        ComputeUnit.CPU_AND_GPU.name,
+                        ComputeUnit.ALL.name,
+                        ComputeUnit.CPU_ONLY.name,
+                    ],
+                ),
+                "controlnet_support": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "lora_stack": ("LORA_STACK",),
+            },
+        }
+
+    RETURN_TYPES = ("COREML_UNET", "CLIP")
+    RETURN_NAMES = ("coreml_model", "CLIP")
+    FUNCTION = "convert"
+
+    def convert(
+        self,
+        ckpt_name,
+        model_type,
+        height,
+        width,
+        batch_size,
+        compute_unit,
+        controlnet_support,
+        lora_stack=None,
+    ):
+        """Converts a LCM model to Core ML.
+
+        Args:
+            height (int): Height of the target image.
+            width (int): Width of the target image.
+            batch_size (int): Batch size.
+            compute_unit (str): Compute unit to use when loading the model.
+
+        Returns:
+            coreml_model: The converted Core ML model.
+
+        The converted model is also saved to "models/unet" directory and
+        can be loaded with the "LCMCoreMLLoaderUNet" node.
+        """
+        h = height
+        w = width
+        sample_size = (h // 8, w // 8)
+        batch_size = batch_size
+        cn_support_str = "_cn" if controlnet_support else ""
+        lcm_str = "_lcm" if model_type == "LCM" else ""
+
+        out_name = (
+            f"{ckpt_name.split('.')[0]}_{batch_size}x{w}x{h}{cn_support_str}{lcm_str}"
+        )
+
+        unet_out_path = converter.get_out_path("unet", f"{out_name}")
+
+        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+
+        lora_stack = lora_stack or []
+        lora_paths = [
+            folder_paths.get_full_path("loras", lora[0]) for lora in lora_stack
+        ]
+
+        converter.convert(
+            model_type=ModelType[model_type],
+            ckpt_path=ckpt_path,
+            unet_out_path=unet_out_path,
+            sample_size=sample_size,
+            batch_size=batch_size,
+            controlnet_support=controlnet_support,
+            lora_paths=lora_paths,
+        )
+        unet_target_path = converter.compile_model(
+            out_path=unet_out_path, out_name=out_name, submodule_name="unet"
+        )
+
+        _, clip = load_lora(lora_stack, ckpt_name)
+
+        return (CoreMLModel(unet_target_path, compute_unit, "compiled"), clip)
+
+
+def load_lora(lora_params, ckpt_name):
+    lora_params = (
+        lora_params.copy()
+        if isinstance(lora_params, (list, dict, set))
+        else lora_params
+    )
+    ckpt_name = (
+        ckpt_name.copy() if isinstance(ckpt_name, (list, dict, set)) else ckpt_name
+    )
+
+    def recursive_load_lora(lora_params, ckpt, clip):
+        if len(lora_params) == 0:
+            return ckpt, clip
+
+        lora_name, strength_model, strength_clip = lora_params[0]
+        if os.path.isabs(lora_name):
+            lora_path = lora_name
+        else:
+            lora_path = folder_paths.get_full_path("loras", lora_name)
+
+        lora_model, lora_clip = sd.load_lora_for_models(
+            ckpt, clip, utils.load_torch_file(lora_path), strength_model, strength_clip
+        )
+
+        # Call the function again with the new lora_model and lora_clip and the remaining tuples
+        return recursive_load_lora(lora_params[1:], lora_model, lora_clip)
+
+    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+    ckpt, clip, _, _ = sd.load_checkpoint_guess_config(
+        ckpt_path,
+        output_vae=False,
+        output_clip=True,
+        embedding_directory=folder_paths.get_folder_paths("embeddings"),
+    )
+
+    lora_model, lora_clip = recursive_load_lora(lora_params, ckpt, clip)
+
+    return lora_model, lora_clip
