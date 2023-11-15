@@ -277,11 +277,11 @@ def convert(
     pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_type]
     ref_pipe = pipe_cls.from_single_file(ckpt_path)
 
-    for lora_path in lora_paths:
-        ref_pipe.load_lora_weights(lora_path)
-        ref_pipe.fuse_lora()
-
     if not os.path.exists(unet_out_path):
+        for lora_path in lora_paths:
+            ref_pipe.load_lora_weights(lora_path)
+            ref_pipe.fuse_lora()
+
         convert_unet(
             ref_pipe,
             model_type,
