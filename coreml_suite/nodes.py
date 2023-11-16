@@ -226,6 +226,9 @@ class COREML_CONVERT(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
+
+        lora_stack = sorted(lora_stack, key=lambda lora: lora[0])
+
         h = height
         w = width
         sample_size = (h // 8, w // 8)
@@ -237,13 +240,28 @@ class COREML_CONVERT(COREML_NODE):
             else ""
         )
 
-        out_name = (
-            f"{ckpt_name.split('.')[0]}{lora_str}_{batch_size}x{w}x{h}{cn_support_str}"
+        attn_str = (
+            "_"
+            + {"SPLIT_EINSUM": "se", "SPLIT_EINSUM_V2": "se2", "ORIGINAL": "orig"}[
+                attention_implementation
+            ]
         )
 
-        unet_out_path = converter.get_out_path("unet", f"{out_name}")
-        unet_out_path = unet_out_path.replace(" ", "_")
+        out_name = f"{ckpt_name.split('.')[0]}{lora_str}_{batch_size}x{w}x{h}{cn_support_str}{attn_str}"
+        out_name = out_name.replace(" ", "_")
 
+        logger.info(f"Converting {ckpt_name} to {out_name}")
+        logger.info(f"Batch size: {batch_size}")
+        logger.info(f"Width: {w}, Height: {h}")
+        logger.info(f"ControlNet support: {controlnet_support}")
+        logger.info(f"Attention implementation: {attention_implementation}")
+
+        if lora_stack:
+            logger.info(f"LoRAs used:")
+            for lora_param in lora_stack:
+                logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
+
+        unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
         lora_stack = lora_stack or []
