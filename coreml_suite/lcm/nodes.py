@@ -3,10 +3,11 @@ import os
 from coremltools import ComputeUnit
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
+from coreml_suite import COREML_NODE
 from coreml_suite.lcm import converter as lcm_converter
 
 
-class COREML_CONVERT_LCM:
+class COREML_CONVERT_LCM(COREML_NODE):
     """Converts a LCM model to Core ML."""
 
     @classmethod
