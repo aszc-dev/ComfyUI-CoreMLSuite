@@ -11,7 +11,6 @@ from comfy.model_patcher import ModelPatcher
 from coreml_suite import COREML_NODE
 from comfy.sd import CLIP
 from coreml_suite import converter
-from coreml_suite.converter import ModelType
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from coreml_suite.lora import load_lora
@@ -194,7 +193,6 @@ class COREML_CONVERT(COREML_NODE):
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
-                "model_type": (["SD15", "LCM"], {"default": "SD15"}),
                 "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
@@ -220,7 +218,6 @@ class COREML_CONVERT(COREML_NODE):
     def convert(
         self,
         ckpt_name,
-        model_type,
         height,
         width,
         batch_size,
@@ -247,13 +244,18 @@ class COREML_CONVERT(COREML_NODE):
         sample_size = (h // 8, w // 8)
         batch_size = batch_size
         cn_support_str = "_cn" if controlnet_support else ""
-        lcm_str = "_lcm" if model_type == "LCM" else ""
+        lora_str = (
+            "_" + "_".join(lora_param[0].split(".")[0] for lora_param in lora_stack)
+            if lora_stack
+            else ""
+        )
 
         out_name = (
-            f"{ckpt_name.split('.')[0]}_{batch_size}x{w}x{h}{cn_support_str}{lcm_str}"
+            f"{ckpt_name.split('.')[0]}{lora_str}_{batch_size}x{w}x{h}{cn_support_str}"
         )
 
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
+        unet_out_path = unet_out_path.replace(" ", "_")
 
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
@@ -263,7 +265,6 @@ class COREML_CONVERT(COREML_NODE):
         ]
 
         converter.convert(
-            model_type=ModelType[model_type],
             ckpt_path=ckpt_path,
             unet_out_path=unet_out_path,
             sample_size=sample_size,

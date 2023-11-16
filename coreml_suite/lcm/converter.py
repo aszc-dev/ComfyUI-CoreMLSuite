@@ -7,6 +7,7 @@ import gc
 import numpy as np
 import torch
 from diffusers import UNet2DConditionModel, LCMScheduler
+from diffusers.loaders import LoraLoaderMixin
 
 from comfy.model_management import get_torch_device
 from coreml_suite.lcm.unet import UNet2DConditionModelLCM
@@ -219,8 +220,15 @@ def convert(
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
+    lora_paths: list[str] = None,
 ):
+    lora_paths = lora_paths or []
     coreml_unet, ref_unet = get_unets()
+
+    for lora_path in lora_paths:
+        lora_sd, network_alphas = LoraLoaderMixin.lora_state_dict(lora_path)
+        LoraLoaderMixin.load_lora_into_unet(lora_sd, network_alphas, ref_unet)
+        ref_unet.fuse_lora()
 
     sample_shape = (
         batch_size,  # B
