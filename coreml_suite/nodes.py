@@ -8,6 +8,7 @@ import folder_paths
 from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
+from coreml_suite import COREML_NODE
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler
@@ -16,7 +17,7 @@ from coreml_suite.models import CoreMLModelWrapper
 from coreml_suite.config import get_model_config
 
 
-class CoreMLSampler(KSampler):
+class CoreMLSampler(COREML_NODE, KSampler):
     @classmethod
     def INPUT_TYPES(s):
         old_required = KSampler.INPUT_TYPES()["required"].copy()
@@ -28,8 +29,6 @@ class CoreMLSampler(KSampler):
             "required": new_required | old_required,
             "optional": {"negative": ("CONDITIONING",), "latent_image": ("LATENT",)},
         }
-
-    CATEGORY = "Core ML Suite"
 
     def sample(
         self,
@@ -89,7 +88,7 @@ class CoreMLSampler(KSampler):
         return model_patcher
 
 
-class CoreMLLoader:
+class CoreMLLoader(COREML_NODE):
     PACKAGE_DIRNAME = ""
 
     @classmethod
@@ -109,7 +108,6 @@ class CoreMLLoader:
         }
 
     FUNCTION = "load"
-    CATEGORY = "Core ML Suite"
 
     @classmethod
     def coreml_filenames(cls):
