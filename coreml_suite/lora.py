@@ -24,7 +24,7 @@ def load_lora(lora_params, ckpt_name):
         else:
             lora_path = folder_paths.get_full_path("loras", lora_name)
 
-        lora_clip = sd.load_lora_for_models(
+        _, lora_clip = sd.load_lora_for_models(
             None, clip, utils.load_torch_file(lora_path), strength_model, strength_clip
         )
 
