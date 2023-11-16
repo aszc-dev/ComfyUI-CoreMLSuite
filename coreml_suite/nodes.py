@@ -9,7 +9,6 @@ from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
 from coreml_suite import COREML_NODE
-from comfy.sd import CLIP
 from coreml_suite import converter
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
@@ -136,7 +135,7 @@ class CoreMLLoaderUNet(CoreMLLoader):
     RETURN_NAMES = ("coreml_model",)
 
 
-class CoreMLModelAdapter:
+class CoreMLModelAdapter(COREML_NODE):
     """
     Adapter Node to use CoreML models as Comfy models. This is an experimental
     feature and may not work as expected.
@@ -162,27 +161,6 @@ class CoreMLModelAdapter:
         model.diffusion_model = wrapped_model
         model_patcher = ModelPatcher(model, get_torch_device(), None)
         return (model_patcher,)
-
-
-class COREML_LOAD_CLIP(CoreMLLoader):
-    PACKAGE_DIRNAME = "clip"
-    RETURN_TYPES = ("CLIP",)
-
-    FUNCTION = "load_clip"
-
-    def load_clip(self, coreml_name, compute_unit):
-        coreml_model = super().load(coreml_name, compute_unit)[0]
-
-        class EmptyClass:
-            pass
-
-        clip_target = EmptyClass()
-        clip_target.params = {"coreml_model": coreml_model}
-        clip_target.clip = SDClipModelCoreML
-        clip_target.tokenizer = sd1_clip.SD1Tokenizer
-        embedding_directory = folder_paths.get_folder_paths("embeddings")[0]
-
-        return (CLIP(clip_target, embedding_directory),)
 
 
 class COREML_CONVERT(COREML_NODE):
@@ -278,4 +256,4 @@ class COREML_CONVERT(COREML_NODE):
 
         clip = load_lora(lora_stack, ckpt_name)
 
-        return (CoreMLModel(unet_target_path, compute_unit, "compiled"), clip)
+        return CoreMLModel(unet_target_path, compute_unit, "compiled"), clip
