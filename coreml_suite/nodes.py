@@ -13,8 +13,7 @@ from coreml_suite import COREML_NODE
 from coreml_suite import converter
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
-from coreml_suite.lora import load_lora
-from nodes import KSampler
+from nodes import KSampler, LoraLoader
 
 from coreml_suite.models import CoreMLModelWrapper
 from coreml_suite.config import get_model_config
@@ -193,12 +192,12 @@ class COREML_CONVERT(COREML_NODE):
                 "controlnet_support": ("BOOLEAN", {"default": False}),
             },
             "optional": {
-                "lora_stack": ("LORA_STACK",),
+                "lora_params": ("LORA_PARAMS",),
             },
         }
 
-    RETURN_TYPES = ("COREML_UNET", "CLIP")
-    RETURN_NAMES = ("coreml_model", "CLIP")
+    RETURN_TYPES = ("COREML_UNET",)
+    RETURN_NAMES = ("coreml_model",)
     FUNCTION = "convert"
 
     def convert(
@@ -210,7 +209,7 @@ class COREML_CONVERT(COREML_NODE):
         attention_implementation,
         compute_unit,
         controlnet_support,
-        lora_stack=None,
+        lora_params=None,
     ):
         """Converts a LCM model to Core ML.
 
@@ -227,7 +226,7 @@ class COREML_CONVERT(COREML_NODE):
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
 
-        lora_stack = sorted(lora_stack, key=lambda lora: lora[0])
+        lora_params = sorted(lora_params, key=lambda lora: lora[0])
 
         h = height
         w = width
@@ -235,8 +234,8 @@ class COREML_CONVERT(COREML_NODE):
         batch_size = batch_size
         cn_support_str = "_cn" if controlnet_support else ""
         lora_str = (
-            "_" + "_".join(lora_param[0].split(".")[0] for lora_param in lora_stack)
-            if lora_stack
+            "_" + "_".join(lora_param[0].split(".")[0] for lora_param in lora_params)
+            if lora_params
             else ""
         )
 
@@ -256,17 +255,17 @@ class COREML_CONVERT(COREML_NODE):
         logger.info(f"ControlNet support: {controlnet_support}")
         logger.info(f"Attention implementation: {attention_implementation}")
 
-        if lora_stack:
+        if lora_params:
             logger.info(f"LoRAs used:")
-            for lora_param in lora_stack:
+            for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
 
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
-        lora_stack = lora_stack or []
+        lora_params = lora_params or []
         lora_paths = [
-            folder_paths.get_full_path("loras", lora[0]) for lora in lora_stack
+            folder_paths.get_full_path("loras", lora[0]) for lora in lora_params
         ]
 
         converter.convert(
@@ -282,6 +281,30 @@ class COREML_CONVERT(COREML_NODE):
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"
         )
 
-        clip = load_lora(lora_stack, ckpt_name)
+        return (CoreMLModel(unet_target_path, compute_unit, "compiled"),)
 
-        return CoreMLModel(unet_target_path, compute_unit, "compiled"), clip
+
+class COREML_LOAD_LORA(COREML_NODE, LoraLoader):
+    @classmethod
+    def INPUT_TYPES(s):
+        required = LoraLoader.INPUT_TYPES()["required"].copy()
+        required.pop("model")
+        return {
+            "required": required,
+            "optional": {"lora_params": ("LORA_PARAMS",)},
+        }
+
+    RETURN_TYPES = ("CLIP", "LORA_PARAMS")
+    RETURN_NAMES = ("CLIP", "lora_params")
+
+    def load_lora(
+        self, clip, lora_name, strength_model, strength_clip, lora_params=None
+    ):
+        _, lora_clip = super().load_lora(
+            None, clip, lora_name, strength_model, strength_clip
+        )
+
+        lora_params = lora_params or []
+        lora_params.append((lora_name, strength_model, strength_clip))
+
+        return lora_clip, lora_params
