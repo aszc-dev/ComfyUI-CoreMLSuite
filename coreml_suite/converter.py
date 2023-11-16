@@ -6,9 +6,13 @@ from enum import Enum, auto
 
 import coremltools as ct
 import numpy as np
+import python_coreml_stable_diffusion.unet
 import torch
 from diffusers import StableDiffusionPipeline, LatentConsistencyModelPipeline
-from python_coreml_stable_diffusion.unet import UNet2DConditionModel
+from python_coreml_stable_diffusion.unet import (
+    UNet2DConditionModel,
+    AttentionImplementations,
+)
 
 from coreml_suite.lcm.unet import UNet2DConditionModelLCM
 from coreml_suite.logger import logger
@@ -273,10 +277,15 @@ def convert(
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
     lora_paths: list[str | os.PathLike] = None,
+    attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
 ):
     if os.path.exists(unet_out_path):
         logger.info(f"Found existing model at {unet_out_path}! Skipping..")
         return
+
+    python_coreml_stable_diffusion.unet.ATTENTION_IMPLEMENTATION_IN_EFFECT = (
+        AttentionImplementations(attn_impl)
+    )
 
     model_type = ModelType.SD15
 
