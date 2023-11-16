@@ -225,7 +225,8 @@ class COREML_CONVERT(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
-
+        lora_params = lora_params or {}
+        lora_params = [(k, v[0], v[1]) for k, v in lora_params.items()]
         lora_params = sorted(lora_params, key=lambda lora: lora[0])
 
         h = height
@@ -304,7 +305,7 @@ class COREML_LOAD_LORA(COREML_NODE, LoraLoader):
             None, clip, lora_name, strength_model, strength_clip
         )
 
-        lora_params = lora_params or []
-        lora_params.append((lora_name, strength_model, strength_clip))
+        lora_params = lora_params or {}
+        lora_params[lora_name] = (strength_model, strength_clip)
 
         return lora_clip, lora_params
