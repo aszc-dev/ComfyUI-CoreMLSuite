@@ -1,4 +1,3 @@
-import abc
 import gc
 import os
 import shutil
@@ -9,9 +8,7 @@ import coremltools as ct
 import numpy as np
 import torch
 from diffusers import StableDiffusionPipeline, LatentConsistencyModelPipeline
-from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 from python_coreml_stable_diffusion.unet import UNet2DConditionModel
-from torch import nn
 
 from coreml_suite.lcm.unet import UNet2DConditionModelLCM
 from coreml_suite.logger import logger
@@ -23,6 +20,10 @@ class ModelType(Enum):
     LCM = auto()
 
 
+class StableDiffusionLCMPipeline(LatentConsistencyModelPipeline):
+    pass
+
+
 MODEL_TYPE_TO_UNET_CLS = {
     ModelType.SD15: UNet2DConditionModel,
     ModelType.LCM: UNet2DConditionModelLCM,
@@ -30,7 +31,7 @@ MODEL_TYPE_TO_UNET_CLS = {
 
 MODEL_TYPE_TO_PIPE_CLS = {
     ModelType.SD15: StableDiffusionPipeline,
-    ModelType.LCM: LatentConsistencyModelPipeline,
+    ModelType.LCM: StableDiffusionLCMPipeline,
 }
 
 
@@ -266,7 +267,6 @@ def convert_unet(
 
 
 def convert(
-    model_type: ModelType,
     ckpt_path: str,
     unet_out_path: str,
     batch_size: int = 1,
@@ -274,22 +274,27 @@ def convert(
     controlnet_support: bool = False,
     lora_paths: list[str | os.PathLike] = None,
 ):
+    if os.path.exists(unet_out_path):
+        logger.info(f"Found existing model at {unet_out_path}! Skipping..")
+        return
+
+    model_type = ModelType.SD15
+
     pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_type]
     ref_pipe = pipe_cls.from_single_file(ckpt_path)
 
-    if not os.path.exists(unet_out_path):
-        for lora_path in lora_paths:
-            ref_pipe.load_lora_weights(lora_path)
-            ref_pipe.fuse_lora()
+    for lora_path in lora_paths:
+        ref_pipe.load_lora_weights(lora_path)
+        ref_pipe.fuse_lora()
 
-        convert_unet(
-            ref_pipe,
-            model_type,
-            unet_out_path,
-            batch_size,
-            sample_size,
-            controlnet_support,
-        )
+    convert_unet(
+        ref_pipe,
+        model_type,
+        unet_out_path,
+        batch_size,
+        sample_size,
+        controlnet_support,
+    )
 
 
 def compile_model(out_path, out_name, submodule_name):
