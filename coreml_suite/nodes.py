@@ -226,8 +226,9 @@ class COREML_CONVERT(COREML_NODE):
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
         lora_params = lora_params or {}
-        lora_params = [(k, v[0], v[1]) for k, v in lora_params.items()]
+        lora_params = [(k, v[0]) for k, v in lora_params.items()]
         lora_params = sorted(lora_params, key=lambda lora: lora[0])
+        lora_weights = [(self.lora_path(lora[0]), lora[1]) for lora in lora_params]
 
         h = height
         w = width
@@ -264,7 +265,6 @@ class COREML_CONVERT(COREML_NODE):
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
-        lora_params = lora_params or []
         lora_paths = [
             folder_paths.get_full_path("loras", lora[0]) for lora in lora_params
         ]
@@ -275,7 +275,7 @@ class COREML_CONVERT(COREML_NODE):
             sample_size=sample_size,
             batch_size=batch_size,
             controlnet_support=controlnet_support,
-            lora_paths=lora_paths,
+            lora_weights=lora_weights,
             attn_impl=attention_implementation,
         )
         unet_target_path = converter.compile_model(
@@ -283,6 +283,10 @@ class COREML_CONVERT(COREML_NODE):
         )
 
         return (CoreMLModel(unet_target_path, compute_unit, "compiled"),)
+
+    @staticmethod
+    def lora_path(lora_name):
+        return folder_paths.get_full_path("loras", lora_name)
 
 
 class COREML_LOAD_LORA(COREML_NODE, LoraLoader):
