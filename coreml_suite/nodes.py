@@ -265,9 +265,10 @@ class COREML_CONVERT(COREML_NODE):
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
-        lora_paths = [
-            folder_paths.get_full_path("loras", lora[0]) for lora in lora_params
-        ]
+        config_filename = ckpt_name.split(".")[0] + ".yaml"
+        config_path = folder_paths.get_full_path("configs", config_filename)
+        if config_path:
+            logger.info(f"Using config file {config_path}")
 
         converter.convert(
             ckpt_path=ckpt_path,
@@ -277,6 +278,7 @@ class COREML_CONVERT(COREML_NODE):
             controlnet_support=controlnet_support,
             lora_weights=lora_weights,
             attn_impl=attention_implementation,
+            config_path=config_path,
         )
         unet_target_path = converter.compile_model(
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"
