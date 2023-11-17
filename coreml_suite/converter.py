@@ -276,7 +276,7 @@ def convert(
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
-    lora_paths: list[str | os.PathLike] = None,
+    lora_weights: list[tuple[str | os.PathLike, float]] = None,
     attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
 ):
     if os.path.exists(unet_out_path):
@@ -292,8 +292,11 @@ def convert(
     pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_type]
     ref_pipe = pipe_cls.from_single_file(ckpt_path)
 
-    for lora_path in lora_paths:
-        ref_pipe.load_lora_weights(lora_path)
+    for i, lora_weight in enumerate(lora_weights or []):
+        lora_path, strength = lora_weight
+        adapter_name = f"lora_{i}"
+        ref_pipe.load_lora_weights(lora_path, adapter_name=adapter_name)
+        ref_pipe.set_adapters([adapter_name], adapter_weights=[strength])
         ref_pipe.fuse_lora()
 
     convert_unet(
