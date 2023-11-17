@@ -278,6 +278,7 @@ def convert(
     controlnet_support: bool = False,
     lora_weights: list[tuple[str | os.PathLike, float]] = None,
     attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
+    config_path: str = None,
 ):
     if os.path.exists(unet_out_path):
         logger.info(f"Found existing model at {unet_out_path}! Skipping..")
@@ -290,7 +291,7 @@ def convert(
     model_type = ModelType.SD15
 
     pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_type]
-    ref_pipe = pipe_cls.from_single_file(ckpt_path)
+    ref_pipe = pipe_cls.from_single_file(ckpt_path, original_config_file=config_path)
 
     for i, lora_weight in enumerate(lora_weights or []):
         lora_path, strength = lora_weight
