@@ -2,8 +2,8 @@
 
 ## Overview
 
-Welcome! In this repository you'll find a set of custom nodes for ComfyUI that allows you to use Core ML models in your
-ComfyUI workflows.
+Welcome! In this repository you'll find a set of custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+that allows you to use Core ML models in your ComfyUI workflows.
 These models are designed to leverage the Apple Neural Engine (ANE) on Apple Silicon (M1/M2) machines,
 thereby enhancing your workflows and improving performance.
 
