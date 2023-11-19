@@ -1,8 +1,13 @@
 import numpy as np
 import torch
 
+from comfy import model_base
+from comfy.model_management import get_torch_device
+from comfy.model_patcher import ModelPatcher
+from coreml_suite.config import get_model_config
 from coreml_suite.controlnet import extract_residual_kwargs, chunk_control
 from coreml_suite.latents import chunk_batch, merge_chunks
+from coreml_suite.logger import logger
 
 
 class CoreMLModelWrapper:
@@ -177,8 +182,6 @@ def add_sdxl_model_options(model_patcher, positive, negative):
         pos_dict.get("width", 768),
         pos_dict.get("crop_h", 0),
         pos_dict.get("crop_w", 0),
-        pos_dict.get("target_height", 768),
-        pos_dict.get("target_width", 768),
     ]
 
     neg_time_ids = [
@@ -186,9 +189,31 @@ def add_sdxl_model_options(model_patcher, positive, negative):
         neg_dict.get("width", 768),
         neg_dict.get("crop_h", 0),
         neg_dict.get("crop_w", 0),
-        neg_dict.get("target_height", 768),
-        neg_dict.get("target_width", 768),
     ]
+
+    if model_patcher.model.diffusion_model.expected_inputs["time_ids"]["shape"][1] == 6:
+        base_pos_time_ids = [
+            pos_dict.get("target_height", 768),
+            pos_dict.get("target_width", 768),
+        ]
+        pos_time_ids += base_pos_time_ids
+
+        base_neg_time_ids = [
+            neg_dict.get("target_height", 768),
+            neg_dict.get("target_width", 768),
+        ]
+        neg_time_ids += base_neg_time_ids
+
+    else:
+        refiner_pos_time_ids = [
+            pos_dict.get("aesthetic_score", 6),
+        ]
+        pos_time_ids += refiner_pos_time_ids
+
+        refiner_neg_time_ids = [
+            neg_dict.get("aesthetic_score", 2.5),
+        ]
+        neg_time_ids += refiner_neg_time_ids
 
     time_ids = torch.tensor([pos_time_ids, neg_time_ids])
 
@@ -200,3 +225,28 @@ def add_sdxl_model_options(model_patcher, positive, negative):
     mp.model_options |= model_options
 
     return mp
+
+
+def get_latent_image(coreml_model, latent_image):
+    if latent_image is not None:
+        return latent_image
+
+    logger.warning("No latent image provided, using empty tensor.")
+    expected = coreml_model.expected_inputs["sample"]["shape"]
+    batch_size = max(expected[0] // 2, 1)
+    latent_image = {"samples": torch.zeros(batch_size, *expected[1:])}
+    return latent_image
+
+
+def get_model_patcher(coreml_model):
+    model_config = get_model_config()
+    wrapped_model = CoreMLModelWrapper(coreml_model)
+
+    if is_sdxl(coreml_model):
+        model = model_base.SDXL(model_config, device=get_torch_device())
+    else:
+        model = model_base.BaseModel(model_config, device=get_torch_device())
+
+    model.diffusion_model = wrapped_model
+    model_patcher = ModelPatcher(model, get_torch_device(), None)
+    return model_patcher
