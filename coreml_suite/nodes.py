@@ -15,7 +15,7 @@ from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler, LoraLoader
 
-from coreml_suite.models import CoreMLModelWrapper
+from coreml_suite.models import CoreMLModelWrapper, add_sdxl_model_options, is_sdxl
 from coreml_suite.config import get_model_config
 
 
@@ -58,6 +58,9 @@ class CoreMLSampler(COREML_NODE, KSampler):
                 negative is not None
             ), "Negative conditioning is optional only for LCM models."
 
+        if is_sdxl(coreml_model):
+            model_patcher = add_sdxl_model_options(model_patcher, positive, negative)
+
         return super().sample(
             model_patcher,
             seed,
@@ -84,7 +87,12 @@ class CoreMLSampler(COREML_NODE, KSampler):
     def get_model_patcher(self, coreml_model):
         model_config = get_model_config()
         wrapped_model = CoreMLModelWrapper(coreml_model)
-        model = model_base.BaseModel(model_config, device=get_torch_device())
+
+        if is_sdxl(coreml_model):
+            model = model_base.SDXL(model_config, device=get_torch_device())
+        else:
+            model = model_base.BaseModel(model_config, device=get_torch_device())
+
         model.diffusion_model = wrapped_model
         model_patcher = ModelPatcher(model, get_torch_device(), None)
         return model_patcher
