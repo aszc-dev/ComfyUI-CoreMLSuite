@@ -8,7 +8,7 @@ from coreml_suite.nodes import (
     CoreMLSampler,
     CoreMLSamplerAdvanced,
     CoreMLModelAdapter,
-    COREML_CONVERT,
+    CoreMLConverter,
     COREML_LOAD_LORA,
 )
 from coreml_suite.lcm import (
@@ -21,7 +21,7 @@ NODE_CLASS_MAPPINGS = {
     "CoreMLSamplerAdvanced": CoreMLSamplerAdvanced,
     "CoreMLModelAdapter": CoreMLModelAdapter,
     "Core ML LoRA Loader": COREML_LOAD_LORA,
-    "Core ML Converter": COREML_CONVERT,
+    "Core ML Converter": CoreMLConverter,
     "Core ML LCM Converter": COREML_CONVERT_LCM,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
