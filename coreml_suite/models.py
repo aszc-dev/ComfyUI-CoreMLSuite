@@ -4,9 +4,10 @@ import torch
 from comfy import model_base
 from comfy.model_management import get_torch_device
 from comfy.model_patcher import ModelPatcher
-from coreml_suite.config import get_model_config
+from coreml_suite.config import get_model_config, ModelVersion
 from coreml_suite.controlnet import extract_residual_kwargs, chunk_control
 from coreml_suite.latents import chunk_batch, merge_chunks
+from coreml_suite.lcm.utils import is_lcm
 from coreml_suite.logger import logger
 
 
@@ -37,6 +38,28 @@ class CoreMLModelWrapper:
     @property
     def expected_inputs(self):
         return self.coreml_model.expected_inputs
+
+    @property
+    def is_lcm(self):
+        return is_lcm(self.coreml_model)
+
+    @property
+    def is_sdxl_base(self):
+        return is_sdxl_base(self.coreml_model)
+
+    @property
+    def is_sdxl_refiner(self):
+        return is_sdxl_refiner(self.coreml_model)
+
+    @property
+    def config(self):
+        if self.is_sdxl_base:
+            return get_model_config(ModelVersion.SDXL)
+
+        if self.is_sdxl_refiner:
+            return get_model_config(ModelVersion.SDXL_REFINER)
+
+        return get_model_config(ModelVersion.SD15)
 
 
 class CoreMLModelWrapperLCM(CoreMLModelWrapper):
@@ -155,6 +178,20 @@ def is_sdxl(coreml_model):
     )
 
 
+def is_sdxl_base(coreml_model):
+    return (
+        is_sdxl(coreml_model)
+        and coreml_model.expected_inputs["time_ids"]["shape"][1] == 6
+    )
+
+
+def is_sdxl_refiner(coreml_model):
+    return (
+        is_sdxl(coreml_model)
+        and coreml_model.expected_inputs["time_ids"]["shape"][1] == 5
+    )
+
+
 def sdxl_model_function_wrapper(time_ids, text_embeds):
     def wrapper(model_function, params):
         x = params["input"]
@@ -191,7 +228,7 @@ def add_sdxl_model_options(model_patcher, positive, negative):
         neg_dict.get("crop_w", 0),
     ]
 
-    if model_patcher.model.diffusion_model.expected_inputs["time_ids"]["shape"][1] == 6:
+    if model_patcher.model.diffusion_model.is_sdxl_base:
         base_pos_time_ids = [
             pos_dict.get("target_height", 768),
             pos_dict.get("target_width", 768),
@@ -204,7 +241,7 @@ def add_sdxl_model_options(model_patcher, positive, negative):
         ]
         neg_time_ids += base_neg_time_ids
 
-    else:
+    if model_patcher.model.diffusion_model.is_sdxl_refiner:
         refiner_pos_time_ids = [
             pos_dict.get("aesthetic_score", 6),
         ]
@@ -239,13 +276,14 @@ def get_latent_image(coreml_model, latent_image):
 
 
 def get_model_patcher(coreml_model):
-    model_config = get_model_config()
     wrapped_model = CoreMLModelWrapper(coreml_model)
 
-    if is_sdxl(coreml_model):
-        model = model_base.SDXL(model_config, device=get_torch_device())
+    if wrapped_model.is_sdxl_base:
+        model = model_base.SDXL(wrapped_model.config, device=get_torch_device())
+    elif wrapped_model.is_sdxl_refiner:
+        model = model_base.SDXLRefiner(wrapped_model.config, device=get_torch_device())
     else:
-        model = model_base.BaseModel(model_config, device=get_torch_device())
+        model = model_base.BaseModel(wrapped_model.config, device=get_torch_device())
 
     model.diffusion_model = wrapped_model
     model_patcher = ModelPatcher(model, get_torch_device(), None)

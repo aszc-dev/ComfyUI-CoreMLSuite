@@ -1,14 +1,10 @@
 import os
 
-import torch
 from coremltools import ComputeUnit
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 from python_coreml_stable_diffusion.unet import AttentionImplementations
 
 import folder_paths
-from comfy import model_base
-from comfy.model_management import get_torch_device
-from comfy.model_patcher import ModelPatcher
 from coreml_suite import COREML_NODE
 from coreml_suite import converter
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
@@ -16,13 +12,11 @@ from coreml_suite.logger import logger
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
-    CoreMLModelWrapper,
     add_sdxl_model_options,
     is_sdxl,
     get_model_patcher,
     get_latent_image,
 )
-from coreml_suite.config import get_model_config
 
 
 class CoreMLSampler(COREML_NODE, KSampler):
@@ -210,11 +204,7 @@ class CoreMLModelAdapter(COREML_NODE):
     CATEGORY = "Core ML Suite"
 
     def wrap(self, coreml_model):
-        model_config = get_model_config()
-        wrapped_model = CoreMLModelWrapper(coreml_model)
-        model = model_base.BaseModel(model_config, device=get_torch_device())
-        model.diffusion_model = wrapped_model
-        model_patcher = ModelPatcher(model, get_torch_device(), None)
+        model_patcher = get_model_patcher(coreml_model)
         return (model_patcher,)
 
 
