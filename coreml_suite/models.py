@@ -132,7 +132,7 @@ class CoreMLInputs:
             chunked_ts_cond = chunk_batch(self.ts_cond, ts_cond_shape)
 
         chunked_time_ids = [None] * len(chunked_x)
-        if expected_inputs["time_ids"] is not None:
+        if expected_inputs.get("time_ids") is not None:
             time_ids_shape = expected_inputs["time_ids"]["shape"]
             if self.time_ids is None:
                 self.time_ids = torch.zeros(len(chunked_x), *time_ids_shape[1:]).to(
@@ -141,7 +141,7 @@ class CoreMLInputs:
             chunked_time_ids = chunk_batch(self.time_ids, time_ids_shape)
 
         chunked_text_embeds = [None] * len(chunked_x)
-        if expected_inputs["text_embeds"] is not None:
+        if expected_inputs.get("text_embeds") is not None:
             text_embeds_shape = expected_inputs["text_embeds"]["shape"]
             if self.text_embeds is None:
                 self.text_embeds = torch.zeros(
