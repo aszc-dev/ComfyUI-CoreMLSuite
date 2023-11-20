@@ -7,6 +7,7 @@ from python_coreml_stable_diffusion.unet import AttentionImplementations
 import folder_paths
 from coreml_suite import COREML_NODE
 from coreml_suite import converter
+from coreml_suite.config import ModelVersion
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
@@ -208,7 +209,7 @@ class CoreMLModelAdapter(COREML_NODE):
         return (model_patcher,)
 
 
-class COREML_CONVERT(COREML_NODE):
+class CoreMLConverter(COREML_NODE):
     """Converts a LCM model to Core ML."""
 
     @classmethod
@@ -216,6 +217,13 @@ class COREML_CONVERT(COREML_NODE):
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+                "model_version": (
+                    [
+                        ModelVersion.SD15.name,
+                        ModelVersion.SDXL.name,
+                        ModelVersion.LCM.name,
+                    ],
+                ),
                 "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
@@ -248,6 +256,7 @@ class COREML_CONVERT(COREML_NODE):
     def convert(
         self,
         ckpt_name,
+        model_version,
         height,
         width,
         batch_size,
@@ -270,6 +279,8 @@ class COREML_CONVERT(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
+        model_version = ModelVersion[model_version]
+
         lora_params = lora_params or {}
         lora_params = [(k, v[0]) for k, v in lora_params.items()]
         lora_params = sorted(lora_params, key=lambda lora: lora[0])
@@ -317,6 +328,7 @@ class COREML_CONVERT(COREML_NODE):
 
         converter.convert(
             ckpt_path=ckpt_path,
+            model_version=model_version,
             unet_out_path=unet_out_path,
             sample_size=sample_size,
             batch_size=batch_size,

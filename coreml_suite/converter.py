@@ -2,26 +2,26 @@ import gc
 import os
 import shutil
 import time
-from enum import Enum, auto
 
 import coremltools as ct
 import numpy as np
 import python_coreml_stable_diffusion.unet
 import torch
-from diffusers import StableDiffusionPipeline, LatentConsistencyModelPipeline
+from diffusers import (
+    StableDiffusionPipeline,
+    LatentConsistencyModelPipeline,
+    StableDiffusionXLPipeline,
+)
 from python_coreml_stable_diffusion.unet import (
     UNet2DConditionModel,
+    UNet2DConditionModelXL,
     AttentionImplementations,
 )
 
+from coreml_suite.config import ModelVersion
 from coreml_suite.lcm.unet import UNet2DConditionModelLCM
 from coreml_suite.logger import logger
 from folder_paths import get_folder_paths
-
-
-class ModelType(Enum):
-    SD15 = auto()
-    LCM = auto()
 
 
 class StableDiffusionLCMPipeline(LatentConsistencyModelPipeline):
@@ -29,17 +29,19 @@ class StableDiffusionLCMPipeline(LatentConsistencyModelPipeline):
 
 
 MODEL_TYPE_TO_UNET_CLS = {
-    ModelType.SD15: UNet2DConditionModel,
-    ModelType.LCM: UNet2DConditionModelLCM,
+    ModelVersion.SD15: UNet2DConditionModel,
+    ModelVersion.SDXL: UNet2DConditionModelXL,
+    ModelVersion.LCM: UNet2DConditionModelLCM,
 }
 
 MODEL_TYPE_TO_PIPE_CLS = {
-    ModelType.SD15: StableDiffusionPipeline,
-    ModelType.LCM: StableDiffusionLCMPipeline,
+    ModelVersion.SD15: StableDiffusionPipeline,
+    ModelVersion.SDXL: StableDiffusionXLPipeline,
+    ModelVersion.LCM: StableDiffusionLCMPipeline,
 }
 
 
-def get_unet(model_type: ModelType, ref_pipe):
+def get_unet(model_type: ModelVersion, ref_pipe):
     ref_unet = ref_pipe.unet
 
     unet_cls = MODEL_TYPE_TO_UNET_CLS[model_type]
@@ -159,6 +161,25 @@ def lcm_inputs(sample_unet_inputs):
     return {"timestep_cond": torch.randn(batch_size, 256).to(torch.float32)}
 
 
+def sdxl_inputs(sample_unet_inputs, ref_pipe):
+    sample_shape = sample_unet_inputs["sample"].shape
+    batch_size = sample_shape[0]
+    h = sample_shape[2] * 8
+    w = sample_shape[3] * 8
+    original_size = (h, w)  # output_resolution
+    crops_coords_top_left = (0, 0)  # topleft_crop_cond
+    target_size = (h, w)  # resolution_cond
+
+    time_ids_list = list(original_size + crops_coords_top_left + target_size)
+    time_ids = torch.tensor(time_ids_list).repeat(batch_size, 1).to(torch.int64)
+    text_embeds_shape = (batch_size, ref_pipe.text_encoder_2.config.hidden_size)
+
+    return {
+        "time_ids": time_ids,
+        "text_embeds": torch.randn(*text_embeds_shape).to(torch.float32),
+    }
+
+
 def get_inputs_spec(inputs):
     inputs_spec = {k: (v.shape, v.dtype) for k, v in inputs.items()}
     return inputs_spec
@@ -217,13 +238,13 @@ def add_cnet_support(sample_shape, reference_unet):
 
 def convert_unet(
     ref_pipe,
-    model_type: ModelType,
+    model_version: ModelVersion,
     unet_out_path: str,
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
 ):
-    coreml_unet = get_unet(model_type, ref_pipe)
+    coreml_unet = get_unet(model_version, ref_pipe)
     ref_unet = ref_pipe.unet
 
     sample_shape = (
@@ -242,8 +263,11 @@ def convert_unet(
         batch_size, encoder_hidden_states_shape, sample_shape, scheduler
     )
 
-    if model_type == ModelType.LCM:
+    if model_version == ModelVersion.LCM:
         sample_inputs |= lcm_inputs(sample_inputs)
+
+    if model_version == ModelVersion.SDXL:
+        sample_inputs |= sdxl_inputs(sample_inputs, ref_pipe)
 
     if controlnet_support:
         sample_inputs |= add_cnet_support(sample_shape, ref_unet)
@@ -272,6 +296,7 @@ def convert_unet(
 
 def convert(
     ckpt_path: str,
+    model_version: ModelVersion,
     unet_out_path: str,
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
@@ -288,10 +313,7 @@ def convert(
         AttentionImplementations(attn_impl)
     )
 
-    model_type = ModelType.SD15
-
-    pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_type]
-    ref_pipe = pipe_cls.from_single_file(ckpt_path, original_config_file=config_path)
+    ref_pipe = get_pipeline(ckpt_path, config_path, model_version)
 
     for i, lora_weight in enumerate(lora_weights or []):
         lora_path, strength = lora_weight
@@ -302,12 +324,18 @@ def convert(
 
     convert_unet(
         ref_pipe,
-        model_type,
+        model_version,
         unet_out_path,
         batch_size,
         sample_size,
         controlnet_support,
     )
+
+
+def get_pipeline(ckpt_path, config_path, model_version):
+    pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_version]
+    ref_pipe = pipe_cls.from_single_file(ckpt_path, original_config_file=config_path)
+    return ref_pipe
 
 
 def compile_model(out_path, out_name, submodule_name):
