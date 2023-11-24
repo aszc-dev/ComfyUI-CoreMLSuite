@@ -66,7 +66,11 @@ These custom nodes come with a host of features, including:
 - Support for ANE (Apple Neural Engine)
 - Support for CPU and GPU
 - Support for `mlmodelc` and `mlpackage` files
+- Support for SDXL models
 - Support for LCM models
+- Support for LoRAs
+- SD1.5 -> Core ML conversion
+- SDXL -> Core ML conversion
 - LCM -> Core ML conversion
 
 > [!NOTE]
@@ -338,6 +342,23 @@ convert [SimianLuo/LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Drea
 model to Core ML. The converted model can then be used with or without ControlNet to generate images.
 ![lcm+controlnet](./assets/lcm+controlnet.png?raw=true)
 
+#### SDXL Base + Refiner conversion
+
+This is a basic workflow for SDXL. You add LoRAs and ControlNets the same way as in the previous examples.
+You can also skip the refiner step.
+
+The models used in this workflow are available at the following links:
+
+- [Base model + text_encoder (clip) + text_encoder_2 (clip2)](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)
+- [Refiner model](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0)
+- [VAE](https://huggingface.co/stabilityai/sdxl-vae)
+
+> [!IMPORTANT]
+> SDXL on ANE is not supported. If loading of the model gets stuck, please try using CPU_AND_GPU or CPU_ONLY.  
+> For best results, use ORIGINAL attention implementation.
+
+![sdxl](./assets/sdxl_conversion.png?raw=true)
+
 ## Limitations
 
 - Core ML models are fixed in terms of their inputs and outputs.
@@ -345,7 +366,6 @@ model to Core ML. The converted model can then be used with or without ControlNe
   SD1.5).
   However, you can convert the model to a different input size using tools available
   in the [apple/ml-stable-diffusion](https://github.com/apple/ml-stable-diffusion) repository.
-- For now, only Stable Diffusion v1.5 is supported.
 
 [^1]:
 Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes)
