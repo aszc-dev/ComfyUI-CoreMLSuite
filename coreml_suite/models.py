@@ -192,7 +192,7 @@ def is_sdxl_refiner(coreml_model):
     )
 
 
-def sdxl_model_function_wrapper(time_ids, text_embeds):
+def sdxl_model_function_wrapper(time_ids, text_embeds, refiner=False):
     def wrapper(model_function, params):
         x = params["input"]
         t = params["timestep"]
@@ -202,6 +202,10 @@ def sdxl_model_function_wrapper(time_ids, text_embeds):
 
         if context is None:
             return torch.zeros_like(x)
+
+        if refiner and context is not None:
+            # converted refiner accepts only g clip
+            c["c_crossattn"] = context[:, :, 768:]
 
         return model_function(x, t, **c, time_ids=time_ids, text_embeds=text_embeds)
 
@@ -213,6 +217,9 @@ def add_sdxl_model_options(model_patcher, positive, negative):
 
     pos_dict = positive[0][1]
     neg_dict = negative[0][1]
+
+    pos_pooled = pos_dict["pooled_output"]
+    neg_pooled = neg_dict["pooled_output"]
 
     pos_time_ids = [
         pos_dict.get("height", 768),
@@ -229,35 +236,33 @@ def add_sdxl_model_options(model_patcher, positive, negative):
     ]
 
     if model_patcher.model.diffusion_model.is_sdxl_base:
-        base_pos_time_ids = [
+        pos_time_ids += [
             pos_dict.get("target_height", 768),
             pos_dict.get("target_width", 768),
         ]
-        pos_time_ids += base_pos_time_ids
 
-        base_neg_time_ids = [
+        neg_time_ids += [
             neg_dict.get("target_height", 768),
             neg_dict.get("target_width", 768),
         ]
-        neg_time_ids += base_neg_time_ids
 
-    if model_patcher.model.diffusion_model.is_sdxl_refiner:
-        refiner_pos_time_ids = [
+    is_refiner = model_patcher.model.diffusion_model.is_sdxl_refiner
+    if is_refiner:
+        pos_time_ids += [
             pos_dict.get("aesthetic_score", 6),
         ]
-        pos_time_ids += refiner_pos_time_ids
 
-        refiner_neg_time_ids = [
+        neg_time_ids += [
             neg_dict.get("aesthetic_score", 2.5),
         ]
-        neg_time_ids += refiner_neg_time_ids
 
     time_ids = torch.tensor([pos_time_ids, neg_time_ids])
-
-    text_embeds = torch.cat((pos_dict["pooled_output"], neg_dict["pooled_output"]))
+    text_embeds = torch.cat((pos_pooled, neg_pooled))
 
     model_options = {
-        "model_function_wrapper": sdxl_model_function_wrapper(time_ids, text_embeds),
+        "model_function_wrapper": sdxl_model_function_wrapper(
+            time_ids, text_embeds, is_refiner
+        ),
     }
     mp.model_options |= model_options
 
