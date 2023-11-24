@@ -83,7 +83,18 @@ These custom nodes come with a host of features, including:
 
 ## Installation
 
-The installation process is simple!
+### Using ComfyUI-Manager
+
+The easiest way to install the custom nodes is to use the ComfyUI-Manager. You can find the installation instructions
+[here](https://github.com/ltdrdata/ComfyUI-Manager#installation). Once you've installed the ComfyUI-Manager, you can
+install the custom nodes by following these steps:
+
+- Open the ComfyUI-Manager by clicking the `Manager` button in the ComfyUI toolbar.
+- Click the `Install Custom Nodes` button.
+- Search for `Core ML` and click the `Install` button.
+- Restart ComfyUI.
+
+### Manual Installation
 
 1. Clone this repository into the custom_nodes directory of your ComfyUI. If you're not sure how to do this, you can
    download the repository as a zip file and extract it into the same directory.
