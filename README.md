@@ -366,6 +366,7 @@ The models used in this workflow are available at the following links:
   SD1.5).
   However, you can convert the model to a different input size using tools available
   in the [apple/ml-stable-diffusion](https://github.com/apple/ml-stable-diffusion) repository.
+- SD2.1 models are not supported.
 
 [^1]:
 Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes)
