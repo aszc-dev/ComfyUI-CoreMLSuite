@@ -52,7 +52,11 @@ def get_unet(model_type: ModelVersion, ref_pipe):
 
 
 def get_encoder_hidden_states_shape(ref_pipe, batch_size):
-    text_encoder = ref_pipe.text_encoder
+    text_encoder = (
+        ref_pipe.text_encoder_2
+        if hasattr(ref_pipe, "text_encoder_2")
+        else ref_pipe.text_encoder
+    )
 
     text_token_sequence_length = text_encoder.config.max_position_embeddings
     hidden_size = (text_encoder.config.hidden_size,)
@@ -166,11 +170,21 @@ def sdxl_inputs(sample_unet_inputs, ref_pipe):
     batch_size = sample_shape[0]
     h = sample_shape[2] * 8
     w = sample_shape[3] * 8
-    original_size = (h, w)  # output_resolution
-    crops_coords_top_left = (0, 0)  # topleft_crop_cond
-    target_size = (h, w)  # resolution_cond
+    original_size = (h, w)
+    crops_coords_top_left = (0, 0)
 
-    time_ids_list = list(original_size + crops_coords_top_left + target_size)
+    is_refiner = (
+        hasattr(ref_pipe.config, "requires_aesthetics_score")
+        and ref_pipe.config.requires_aesthetics_score
+    )
+
+    if is_refiner:
+        aesthetic_score = (6.0,)
+        time_ids_list = list(original_size + crops_coords_top_left + aesthetic_score)
+    else:
+        target_size = (h, w)
+        time_ids_list = list(original_size + crops_coords_top_left + target_size)
+
     time_ids = torch.tensor(time_ids_list).repeat(batch_size, 1).to(torch.int64)
     text_embeds_shape = (batch_size, ref_pipe.text_encoder_2.config.hidden_size)
 
