@@ -221,7 +221,6 @@ class CoreMLConverter(COREML_NODE):
                     [
                         ModelVersion.SD15.name,
                         ModelVersion.SDXL.name,
-                        ModelVersion.LCM.name,
                     ],
                 ),
                 "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
