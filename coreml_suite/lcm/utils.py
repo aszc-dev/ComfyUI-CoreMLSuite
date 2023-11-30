@@ -1,7 +1,7 @@
 import torch
 
 from comfy.model_management import get_torch_device
-from comfy_extras.nodes_model_advanced import ModelSamplingDiscreteLCM, LCM
+from comfy_extras.nodes_model_advanced import ModelSamplingDiscreteDistilled, LCM
 
 
 def is_lcm(coreml_model):
@@ -42,7 +42,7 @@ def model_function_wrapper(w_embedding):
 def lcm_patch(model):
     m = model.clone()
     sampling_type = LCM
-    sampling_base = ModelSamplingDiscreteLCM
+    sampling_base = ModelSamplingDiscreteDistilled
 
     class ModelSamplingAdvanced(sampling_base, sampling_type):
         pass
