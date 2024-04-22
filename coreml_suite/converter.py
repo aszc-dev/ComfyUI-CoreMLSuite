@@ -2,6 +2,7 @@ import gc
 import os
 import shutil
 import time
+from typing import Union
 
 import coremltools as ct
 import numpy as np
@@ -315,7 +316,7 @@ def convert(
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
-    lora_weights: list[tuple[str | os.PathLike, float]] = None,
+    lora_weights: list[tuple[Union[str, os.PathLike], float]] = None,
     attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
     config_path: str = None,
 ):
