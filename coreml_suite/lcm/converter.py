@@ -63,7 +63,7 @@ def get_encoder_hidden_states_shape(unet_config, batch_size):
 
 def get_scheduler():
     scheduler = LCMScheduler.from_pretrained(MODEL_VERSION, subfolder="scheduler")
-    scheduler.set_timesteps(50, get_torch_device(), 50, 1.0)
+    scheduler.set_timesteps(50, get_torch_device(), 50)
     return scheduler
 
 
