@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-coremlsuite"
-description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows. The models can be obtained here, or you can convert your own models using coremltools. The main motivation behind using Core ML models in ComfyUI is to allow you to utilize the ANE (Apple Neural Engine) on Apple Silicon (M1/M2) machines to improve performance."
+description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "1.0.0"
 license = "LICENSE"
 dependencies = ["git+https://github.com/apple/ml-stable-diffusion.git", "coremltools>=7.1", "overrides", "diffusers>=0.22", "peft>=0.6.2", "omegaconf>=2.3"]
@@ -10,6 +10,6 @@ Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "aszc-dev"
 DisplayName = "ComfyUI-CoreMLSuite"
 Icon = ""
