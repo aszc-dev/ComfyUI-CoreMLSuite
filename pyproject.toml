@@ -2,7 +2,7 @@
 name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "1.0.1"
-license = "LICENSE"
+license = { file = "LICENSE" }
 dependencies = ["git+https://github.com/apple/ml-stable-diffusion.git", "coremltools>=7.1", "overrides", "diffusers>=0.22", "peft>=0.6.2", "omegaconf>=2.3"]
 
 [project.urls]
