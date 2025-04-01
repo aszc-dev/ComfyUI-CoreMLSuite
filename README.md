@@ -383,6 +383,49 @@ The models used in this workflow are available at the following links:
 Unless [EnumeratedShapes](https://apple.github.io/coremltools/docs-guides/source/flexible-inputs.html#select-from-predetermined-shapes)
 is used during conversion. Needs more testing.
 
+## FAQ
+
+### Hardware and Performance
+
+#### What's the difference between MPS, GPU, and ANE?
+- **MPS (Metal Performance Shaders)**: Apple's framework for GPU acceleration. It's what PyTorch uses by default on Apple Silicon.
+- **GPU**: The graphics processing unit on your Apple Silicon chip.
+- **ANE (Apple Neural Engine)**: A specialized hardware accelerator for machine learning tasks.
+
+#### Which compute unit should I choose?
+- **CPU_AND_ANE**: Best for models converted with `--attention-implementation SPLIT_EINSUM`. This is the default and recommended option for most users.
+- **CPU_AND_GPU**: Best for models converted with `--attention-implementation ORIGINAL`. Use this if you experience issues with ANE.
+- **CPU_ONLY**: Use this as a fallback if you experience issues with both ANE and GPU.
+
+#### Do I need `PYTORCH_ENABLE_MPS_FALLBACK=1`?
+While our Core ML nodes don't use this environment variable directly, it may still be relevant for other parts of ComfyUI that use PyTorch with MPS backend. The setting of this variable is a user preference and depends on your specific needs and workflow requirements.
+
+### Model Conversion and Compatibility
+
+#### Is there a performance penalty when using the Core ML Adapter?
+Yes, there might be a slight performance penalty compared to using directly converted models. However, the adapter provides more flexibility and compatibility with standard ComfyUI nodes.
+
+#### Does the Core ML Adapter support SDXL?
+Currently, SDXL support in the Core ML Adapter is limited. While it may work with some models, it's not officially supported and may cause issues.
+
+#### Are `mlmodelc` and `mlpackage` formats safe?
+Yes, both formats are safe to use. However, we recommend:
+1. Always downloading original `.safetensors` files from trusted sources
+2. Converting them yourself using our tools
+3. Using the converted `.mlmodelc` files for better performance
+
+#### Do Core ML models produce identical results to their safetensors counterparts?
+While the results should be very similar, there might be slight differences due to:
+- Different numerical precision
+- Hardware-specific optimizations
+- Different attention implementations
+
+#### Should I convert models every time I queue a generation?
+No! The conversion only happens once when you first use the converter node. After that, you should use the `CoreMLUnetLoader` to load the already converted model.
+
+#### Will SDXL ever be supported on ANE?
+Currently, there are technical limitations preventing SDXL from running efficiently on ANE. We recommend using `CPU_AND_GPU` or `CPU_ONLY` for SDXL models.
+
 ## Support
 
 I'm here to help! If you have any questions or suggestions, don't hesitate to open an issue and I'll do my best
