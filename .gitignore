@@ -9,3 +9,4 @@ coremlsuite-venv/
 experiment_results/
 test_results/
 bench/scripts/*.log
+tests/m2/_latest_generated.png

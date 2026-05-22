@@ -37,3 +37,19 @@ dev = [
     "pillow>=12.2.0",
     "psutil>=7.2.2",
 ]
+
+[tool.pytest.ini_options]
+# Phase 2: tier markers gate which environment a test needs.
+# - unit: framework-free pure-logic tests (Tier 0; future Phase 3 will run
+#   these without ComfyUI on Linux). For now they may still transitively
+#   import comfy.
+# - m2:   needs an Apple Silicon Mac with the Neural Engine (Tier 2),
+#   typically the maintainer's self-hosted runner or local M-series box.
+# - smoke: lightweight checks that need Apple Silicon + coremltools but no
+#   ANE/real model (reserved for Phase 4 Tier 1 smoke harness).
+markers = [
+    "unit: framework-free unit test (Tier 0)",
+    "m2: requires Apple Silicon + Neural Engine (Tier 2)",
+    "smoke: macOS-ARM smoke test on a synthetic micro-model (Tier 1)",
+]
+testpaths = ["tests"]
