@@ -1,19 +1,23 @@
-import pytest
+"""Original smoke tests, re-pointed at coreml_suite.core.* in Phase 3.
 
+Drops the `from comfy.model_management import get_torch_device` import
+(replaced with torch.device('cpu') so Tier 0 runs without ComfyUI) and the
+dead `model_config` fixture (defined in Phase 1 but never consumed).
+"""
+import pytest
 import torch
 
-from comfy.model_management import get_torch_device
-from coreml_suite.latents import chunk_batch, merge_chunks
-from coreml_suite.controlnet import chunk_control
-from coreml_suite.models import (
-    CoreMLInputs,
-)
-from coreml_suite.config import ModelVersion, get_model_config
+from coreml_suite.core.controlnet import chunk_control
+from coreml_suite.core.inputs import CoreMLInputs
+from coreml_suite.core.latents import chunk_batch, merge_chunks
+
+
+CPU = torch.device("cpu")
 
 
 @pytest.fixture
 def expected_inputs():
-    expected = {
+    return {
         "sample": {"shape": (2, 4, 64, 64)},
         "timestep": {"shape": (2,)},
         "timestep_cond": {"shape": (2, 256)},
@@ -21,17 +25,11 @@ def expected_inputs():
         "additional_residual_0": {"shape": (2, 320, 64, 64)},
         "additional_residual_1": {"shape": (2, 640, 32, 32)},
     }
-    return expected
-
-
-@pytest.fixture
-def model_config():
-    return get_model_config(ModelVersion.SD15)
 
 
 @pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])
 def test_batch_chunking(batch_size):
-    latent_image = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
+    latent_image = torch.randn(batch_size, 4, 64, 64).to(CPU)
     target_shape = (4, 4, 64, 64)
 
     chunked = chunk_batch(latent_image, target_shape)
@@ -45,7 +43,7 @@ def test_batch_chunking(batch_size):
 
 @pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])
 def test_merge_chunks(batch_size):
-    input_tensor = torch.randn(batch_size, 4, 64, 64).to(get_torch_device())
+    input_tensor = torch.randn(batch_size, 4, 64, 64).to(CPU)
     target_shape = (4, 4, 64, 64)
     chunked = chunk_batch(input_tensor, target_shape)
 
@@ -57,16 +55,16 @@ def test_merge_chunks(batch_size):
 
 @pytest.fixture
 def inputs():
-    x = torch.randn(1, 4, 64, 64).to(get_torch_device())
-    t = torch.randn([1]).to(get_torch_device())
-    c_crossattn = torch.randn(1, 77, 768).to(get_torch_device())
+    x = torch.randn(1, 4, 64, 64).to(CPU)
+    t = torch.randn([1]).to(CPU)
+    c_crossattn = torch.randn(1, 77, 768).to(CPU)
     control = {
         "output": [
-            torch.randn(1, 320, 64, 64).to(get_torch_device()),
-            torch.randn(1, 640, 32, 32).to(get_torch_device()),
+            torch.randn(1, 320, 64, 64).to(CPU),
+            torch.randn(1, 640, 32, 32).to(CPU),
         ],
     }
-    timestep_cond = torch.randn(1, 256).to(get_torch_device())
+    timestep_cond = torch.randn(1, 256).to(CPU)
 
     return CoreMLInputs(x, t, c_crossattn, control, timestep_cond=timestep_cond)
 
@@ -86,11 +84,11 @@ def inputs():
 def test_chunking_controlnet(b, target_size, num_chunks):
     cn = {
         "output": [
-            torch.randn(b, 320, 64, 64).to(get_torch_device()),
-            torch.randn(b, 640, 32, 32).to(get_torch_device()),
+            torch.randn(b, 320, 64, 64).to(CPU),
+            torch.randn(b, 640, 32, 32).to(CPU),
         ],
         "middle": [
-            torch.randn(b, 1280, 8, 8).to(get_torch_device()),
+            torch.randn(b, 1280, 8, 8).to(CPU),
         ],
     }
 

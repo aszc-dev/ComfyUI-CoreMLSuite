@@ -1,72 +1,16 @@
-"""Phase 2 characterization tests for CoreMLConverter.out_name composition.
+"""Phase 2 characterization tests, Phase 3 re-pointed.
 
-out_name is encoded into the .mlpackage filename and therefore drives the
-"have we converted this combo already?" cache check. Drift here silently
-invalidates user caches and breaks workflow node references.
-
-Tests intercept converter.get_out_path to capture the composed string,
-and stub out the heavy conversion + Core ML model load.
+After Phase 3 the .mlpackage filename composition is the pure
+coreml_suite.core.naming.compose_out_name function. CoreMLConverter.convert
+calls it; the previous Phase 2 test had to monkey-patch heavy converter
+internals just to capture the string, which made the test framework-coupled.
 """
 import pytest
 
-import folder_paths
-from coreml_suite import converter
-from coreml_suite import nodes as nodes_mod
-from coreml_suite.nodes import CoreMLConverter
+from coreml_suite.core.naming import compose_out_name, lora_names_from_params
 
 
-@pytest.fixture
-def capture_out_name(monkeypatch):
-    captured = {}
-
-    def fake_get_out_path(submodule, name):
-        captured["submodule"] = submodule
-        captured["out_name"] = name
-        return f"/tmp/fake/{name}.mlpackage"
-
-    monkeypatch.setattr(converter, "get_out_path", fake_get_out_path)
-    monkeypatch.setattr(converter, "convert", lambda **kwargs: None)
-    monkeypatch.setattr(
-        converter,
-        "compile_model",
-        lambda out_path, out_name, submodule_name: f"/tmp/fake/{out_name}_{submodule_name}.mlmodelc",
-    )
-    monkeypatch.setattr(
-        folder_paths,
-        "get_full_path",
-        lambda kind, name: f"/tmp/ckpts/{name}" if kind == "checkpoints" else None,
-    )
-    monkeypatch.setattr(nodes_mod, "CoreMLModel", lambda *a, **kw: object())
-    return captured
-
-
-def _convert(
-    *,
-    ckpt_name="dreamshaper_8.safetensors",
-    model_version="SD15",
-    height=512,
-    width=512,
-    batch_size=1,
-    attention_implementation="SPLIT_EINSUM",
-    compute_unit="CPU_AND_NE",
-    controlnet_support=False,
-    lora_params=None,
-):
-    node = CoreMLConverter()
-    node.convert(
-        ckpt_name=ckpt_name,
-        model_version=model_version,
-        height=height,
-        width=width,
-        batch_size=batch_size,
-        attention_implementation=attention_implementation,
-        compute_unit=compute_unit,
-        controlnet_support=controlnet_support,
-        lora_params=lora_params,
-    )
-
-
-# ---------- basic golden strings --------------------------------------------
+# ---------- attention suffixes ----------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -77,99 +21,125 @@ def _convert(
         ("ORIGINAL", "orig"),
     ],
 )
-def test_out_name_attention_suffix(capture_out_name, attn_name, suffix):
-    _convert(attention_implementation=attn_name)
-    assert capture_out_name["out_name"] == f"dreamshaper_8_1x512x512_{suffix}"
+def test_attention_suffix(attn_name, suffix):
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation=attn_name,
+    )
+    assert out == f"dreamshaper_8_1x512x512_{suffix}"
 
 
-def test_out_name_includes_batch_and_size(capture_out_name):
-    _convert(batch_size=4, width=768, height=1024)
-    assert capture_out_name["out_name"] == "dreamshaper_8_4x768x1024_se"
+# ---------- batch / size ----------------------------------------------------
 
 
-def test_out_name_appends_cn_suffix_when_controlnet_support_true(capture_out_name):
-    _convert(controlnet_support=True)
-    assert capture_out_name["out_name"] == "dreamshaper_8_1x512x512_cn_se"
+def test_includes_batch_and_size():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=4, width=768, height=1024,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+    )
+    assert out == "dreamshaper_8_4x768x1024_se"
 
 
-def test_out_name_drops_dot_extension_only_at_first_period(capture_out_name):
-    """`ckpt_name.split('.')[0]` — first '.' wins; locked behaviour."""
-    _convert(ckpt_name="my.checkpoint.v2.safetensors")
-    assert capture_out_name["out_name"] == "my_1x512x512_se"
+# ---------- ControlNet ------------------------------------------------------
 
 
-def test_out_name_replaces_spaces_with_underscores(capture_out_name):
-    _convert(ckpt_name="dream shaper 8.safetensors")
-    assert capture_out_name["out_name"] == "dream_shaper_8_1x512x512_se"
+def test_appends_cn_suffix_when_controlnet_support_true():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=True,
+        attention_implementation="SPLIT_EINSUM",
+    )
+    assert out == "dreamshaper_8_1x512x512_cn_se"
+
+
+# ---------- ckpt name massage -----------------------------------------------
+
+
+def test_drops_extension_at_first_period():
+    out = compose_out_name(
+        ckpt_name="my.checkpoint.v2.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+    )
+    assert out == "my_1x512x512_se"
+
+
+def test_replaces_spaces_with_underscores():
+    out = compose_out_name(
+        ckpt_name="dream shaper 8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+    )
+    assert out == "dream_shaper_8_1x512x512_se"
 
 
 # ---------- LoRA suffixes ---------------------------------------------------
 
 
-def test_out_name_with_single_lora(capture_out_name, monkeypatch):
-    monkeypatch.setattr(
-        folder_paths,
-        "get_full_path",
-        lambda kind, name: f"/tmp/{kind}/{name}",
+def test_single_lora():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+        lora_names=["epi_noiseoffset.safetensors"],
     )
-    _convert(lora_params={"epi_noiseoffset.safetensors": (0.8,)})
-    assert (
-        capture_out_name["out_name"]
-        == "dreamshaper_8_epi_noiseoffset_1x512x512_se"
-    )
+    assert out == "dreamshaper_8_epi_noiseoffset_1x512x512_se"
 
 
-def test_out_name_with_multiple_loras_sorted(capture_out_name, monkeypatch):
-    """LoRAs are sorted by name then joined with '_' — locks the order."""
-    monkeypatch.setattr(
-        folder_paths,
-        "get_full_path",
-        lambda kind, name: f"/tmp/{kind}/{name}",
+def test_multiple_loras_sorted():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+        lora_names=["zoom.safetensors", "alpha.safetensors", "moody.safetensors"],
     )
-    _convert(
-        lora_params={
-            "zoom.safetensors": (1.0,),
-            "alpha.safetensors": (0.5,),
-            "moody.safetensors": (0.3,),
-        }
-    )
-    assert (
-        capture_out_name["out_name"]
-        == "dreamshaper_8_alpha_moody_zoom_1x512x512_se"
-    )
+    assert out == "dreamshaper_8_alpha_moody_zoom_1x512x512_se"
 
 
-def test_out_name_lora_plus_controlnet(capture_out_name, monkeypatch):
-    monkeypatch.setattr(
-        folder_paths,
-        "get_full_path",
-        lambda kind, name: f"/tmp/{kind}/{name}",
-    )
-    _convert(
-        lora_params={"a.safetensors": (1.0,)},
+def test_lora_plus_controlnet():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
         controlnet_support=True,
+        attention_implementation="SPLIT_EINSUM",
+        lora_names=["a.safetensors"],
     )
-    assert capture_out_name["out_name"] == "dreamshaper_8_a_1x512x512_cn_se"
+    assert out == "dreamshaper_8_a_1x512x512_cn_se"
 
 
 # ---------- sdxl combinations -----------------------------------------------
 
 
-def test_out_name_sdxl_1024(capture_out_name):
-    _convert(
+def test_sdxl_1024_original_gpu():
+    out = compose_out_name(
         ckpt_name="sd_xl_base_1.0.safetensors",
-        model_version="SDXL",
-        width=1024,
-        height=1024,
+        batch_size=1, width=1024, height=1024,
+        controlnet_support=False,
         attention_implementation="ORIGINAL",
-        compute_unit="CPU_AND_GPU",
     )
-    assert capture_out_name["out_name"] == "sd_xl_base_1_1x1024x1024_orig"
+    assert out == "sd_xl_base_1_1x1024x1024_orig"
 
 
-# ---------- submodule path --------------------------------------------------
+# ---------- lora_names_from_params helper ----------------------------------
 
 
-def test_get_out_path_invoked_with_unet_submodule(capture_out_name):
-    _convert()
-    assert capture_out_name["submodule"] == "unet"
+def test_lora_names_from_params_sorts_by_name():
+    names = lora_names_from_params([
+        ("zebra.safetensors", 1.0),
+        ("apple.safetensors", 0.5),
+        ("mango.safetensors", 0.7),
+    ])
+    assert names == ["apple.safetensors", "mango.safetensors", "zebra.safetensors"]
+
+
+def test_lora_names_from_params_empty_list():
+    assert lora_names_from_params([]) == []

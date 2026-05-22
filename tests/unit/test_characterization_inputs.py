@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import torch
 
-from coreml_suite.models import CoreMLInputs
+from coreml_suite.core.inputs import CoreMLInputs
 
 
 @pytest.fixture(autouse=True)

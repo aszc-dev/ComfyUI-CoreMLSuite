@@ -53,3 +53,7 @@ markers = [
     "smoke: macOS-ARM smoke test on a synthetic micro-model (Tier 1)",
 ]
 testpaths = ["tests"]
+# importlib mode keeps pytest from importing the repo-root __init__.py
+# (which is the ComfyUI custom-node entry and pulls in comfy + nodes).
+# Without this Tier-0 leaks the entire ComfyUI runtime on collection.
+addopts = ["--import-mode=importlib", "--confcutdir=tests"]

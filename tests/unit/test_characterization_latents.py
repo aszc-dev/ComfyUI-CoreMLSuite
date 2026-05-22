@@ -7,7 +7,7 @@ cannot silently shift either contract.
 import pytest
 import torch
 
-from coreml_suite.latents import chunk_batch, merge_chunks
+from coreml_suite.core.latents import chunk_batch, merge_chunks
 
 
 @pytest.fixture(autouse=True)

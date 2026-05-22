@@ -40,6 +40,31 @@ _TIER_BY_DIR = {
     "tests/smoke": "smoke",
 }
 
+# When the user asks for a single tier (-m unit / -m m2), skip the other
+# directories at collection time. Tier-0 cannot afford to import tests/m2
+# files because they pull in PIL + ComfyUI runtime which Linux CI won't have.
+_TIER_DIRS = {
+    "unit": ("/tests/unit/",),
+    "m2": ("/tests/m2/", "/tests/integration/"),
+    "smoke": ("/tests/smoke/",),
+}
+
+
+def pytest_ignore_collect(collection_path, config):
+    expr = config.option.markexpr
+    if expr not in _TIER_DIRS:
+        return None
+    allowed = _TIER_DIRS[expr]
+    rel = str(collection_path).replace("\\", "/")
+    if "/tests/" not in rel:
+        return None
+    # Always allow tests/ root + the tier's own dirs.
+    if rel.endswith("/tests"):
+        return None
+    if any(frag in rel + "/" for frag in allowed):
+        return None
+    return True
+
 
 def pytest_collection_modifyitems(config, items):
     for item in items:

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 
-from coreml_suite.controlnet import (
+from coreml_suite.core.controlnet import (
     chunk_control,
     expand_inputs,
     extract_residual_kwargs,
