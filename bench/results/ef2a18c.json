@@ -1,0 +1,103 @@
+{
+  "git_sha": "ef2a18c",
+  "timestamp": "2026-05-22T13:07:25+00:00",
+  "host": {
+    "machine": "arm64",
+    "system": "Darwin",
+    "release": "25.1.0",
+    "python": "3.11.14"
+  },
+  "tool_versions": {
+    "coremltools": "8.2",
+    "numpy": "1.23.5"
+  },
+  "settings": {
+    "repeats": 30,
+    "assumed_steps": 20,
+    "input_seed": 0,
+    "compute_units": [
+      "CPU_AND_NE",
+      "CPU_AND_GPU"
+    ]
+  },
+  "results": [
+    {
+      "label": "v1-5-pruned-emaonly_1x512x512_se_unet-CPU_AND_NE",
+      "model_path": "/Users/aszczepanski/dev/ComfyUI/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc",
+      "compute_unit": "CPU_AND_NE",
+      "error": null,
+      "model_size_bytes": 1720795925,
+      "load_time_s": 0.2841,
+      "kind": "sd15",
+      "expected_inputs": {
+        "sample": [
+          1,
+          4,
+          64,
+          64
+        ],
+        "timestep": [
+          1
+        ],
+        "encoder_hidden_states": [
+          1,
+          768,
+          1,
+          77
+        ]
+      },
+      "warmup_ms": 225.201,
+      "forward_ms": {
+        "mean": 197.126,
+        "std": 0.476,
+        "min": 196.812,
+        "median": 196.969,
+        "n": 30
+      },
+      "est_e2e_ms": 3939.4,
+      "peak_rss_mb": 349.7
+    },
+    {
+      "label": "v1-5-pruned-emaonly_1x512x512_se_unet-CPU_AND_GPU",
+      "model_path": "/Users/aszczepanski/dev/ComfyUI/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc",
+      "compute_unit": "CPU_AND_GPU",
+      "error": null,
+      "model_size_bytes": 1720795925,
+      "load_time_s": 19.959,
+      "kind": "sd15",
+      "expected_inputs": {
+        "sample": [
+          1,
+          4,
+          64,
+          64
+        ],
+        "timestep": [
+          1
+        ],
+        "encoder_hidden_states": [
+          1,
+          768,
+          1,
+          77
+        ]
+      },
+      "warmup_ms": 558.865,
+      "forward_ms": {
+        "mean": 270.275,
+        "std": 1.312,
+        "min": 267.398,
+        "median": 270.259,
+        "n": 30
+      },
+      "est_e2e_ms": 5405.2,
+      "peak_rss_mb": 2132.9
+    }
+  ],
+  "notes": [
+    "forward_ms is the latency of a single Core ML UNet forward pass with synthetic inputs; with classifier-free guidance one sampler step typically maps to one batched forward (cond+uncond) \u2014 interpret est_e2e_ms accordingly.",
+    "peak_rss_mb is process RSS only and excludes ANE/wired GPU memory; treat as a floor.",
+    "quality_psnr is null unless --reference-images and --candidate-images are provided.",
+    "Latency varies run-to-run; 'min' is the most reproducible figure for comparisons."
+  ]
+}
