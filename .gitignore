@@ -1,3 +1,11 @@
 playground/
 experiments/
 __pycache__/
+models/
+.venv/
+apple_env/
+comfy_env/
+coremlsuite-venv/
+experiment_results/
+test_results/
+bench/scripts/*.log

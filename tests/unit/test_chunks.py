@@ -8,7 +8,7 @@ from coreml_suite.controlnet import chunk_control
 from coreml_suite.models import (
     CoreMLInputs,
 )
-from coreml_suite.config import get_model_config
+from coreml_suite.config import ModelVersion, get_model_config
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def expected_inputs():
 
 @pytest.fixture
 def model_config():
-    return get_model_config()
+    return get_model_config(ModelVersion.SD15)
 
 
 @pytest.mark.parametrize("batch_size", [1, 2, 4, 5, 9])

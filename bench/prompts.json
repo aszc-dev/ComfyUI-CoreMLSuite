@@ -1,0 +1,19 @@
+{
+  "_comment": "Fixed prompt set for Phase 1 baseline reproducibility. Do not edit without bumping the bench version: changing prompts invalidates cross-baseline PSNR comparisons.",
+  "seed": 0,
+  "negative_prompt": "blurry, low quality, text, watermark",
+  "prompts": [
+    {
+      "id": "p01_portrait",
+      "text": "a portrait of an astronaut in a sunflower field, soft natural light, 35mm film"
+    },
+    {
+      "id": "p02_cityscape",
+      "text": "a futuristic city skyline at sunset, glass towers, volumetric lighting, cinematic"
+    },
+    {
+      "id": "p03_still_life",
+      "text": "a still life of fruit on a wooden table, oil painting, dramatic chiaroscuro"
+    }
+  ]
+}

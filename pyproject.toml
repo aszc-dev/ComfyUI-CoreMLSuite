@@ -2,8 +2,23 @@
 name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "1.0.1"
-license = { file = "LICENSE" }
-dependencies = ["git+https://github.com/apple/ml-stable-diffusion.git", "coremltools>=7.1", "overrides", "diffusers>=0.22", "peft>=0.6.2", "omegaconf>=2.3"]
+license = "MIT"
+requires-python = ">=3.11,<3.12"
+packages = [{ include = "coreml_suite" }]
+dependencies = [
+    # Phase 1 baseline pins: matches the apple_env that last produced working
+    # conversions. Comfy's checkpoint-safe-loading branch (utils.py:33) is gated
+    # on torch>=2.4, so newer torch + numpy 1.23 (ml-sd's pin) breaks at import.
+    # Bump the whole set together in Phase 5; do not bump individually.
+    "python-coreml-stable-diffusion @ git+https://github.com/apple/ml-stable-diffusion.git@e5d960c41a6a4ab200b8db379194127607b1c590",
+    "torch==2.0.1",
+    "coremltools==8.2",
+    "numpy<1.25",
+    "overrides",
+    "diffusers>=0.22",
+    "peft>=0.6.2",
+    "omegaconf>=2.3",
+]
 
 [project.urls]
 Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
@@ -13,3 +28,12 @@ Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
 PublisherId = "aszc-dev"
 DisplayName = "ComfyUI-CoreMLSuite"
 Icon = ""
+# Pinned to the ComfyUI commit this Phase 1 baseline was validated against.
+# Bump together with the toolchain upgrade in Phase 5.
+requires-comfyui = "==ab5413351eee61f3d7f10c74e75286df0058bb18"
+
+[dependency-groups]
+dev = [
+    "pillow>=12.2.0",
+    "psutil>=7.2.2",
+]
