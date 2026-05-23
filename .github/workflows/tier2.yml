@@ -1,0 +1,63 @@
+name: Tier 2 — M2 / ANE (self-hosted)
+
+on:
+  pull_request:
+    types: [labeled]
+  schedule:
+    # Nightly at 04:00 UTC (~05/06 in PL). Keeps the M2 path honest
+    # without burning the runner on every PR.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  m2:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-m2'))
+    # Self-hosted Mac registered by the maintainer. See docs/ci-m2.md
+    # for runner setup and required model paths.
+    runs-on: [self-hosted, macOS, ARM64, coreml]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv sync
+        run: uv sync
+
+      - name: Start ComfyUI server (background)
+        env:
+          COMFY_DIR: ${{ env.COMFY_DIR }}
+        run: |
+          cd "$COMFY_DIR"
+          nohup "$GITHUB_WORKSPACE/.venv/bin/python" main.py --port 8188 --cpu-vae > /tmp/comfyui-ci.log 2>&1 &
+          # Wait for readiness, fail fast if it never comes up.
+          for _ in $(seq 1 60); do
+            if grep -q "To see the GUI" /tmp/comfyui-ci.log 2>/dev/null; then
+              echo "comfy ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "comfy failed to start"; tail -100 /tmp/comfyui-ci.log; exit 1
+
+      - name: Run Tier 2 (m2 marker)
+        run: uv run pytest -m m2 tests/ -v
+
+      - name: Run bench harness
+        run: |
+          uv run python bench/run.py \
+            --model "$COMFY_DIR/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc" \
+            --compute-units CPU_AND_NE CPU_AND_GPU \
+            --repeats 30 --assumed-steps 20
+
+      - name: Upload bench results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-results
+          path: bench/results/*.json
+
+      - name: Stop ComfyUI server
+        if: always()
+        run: pkill -f "main.py.*8188" || true
