@@ -3,17 +3,20 @@ name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "1.0.1"
 license = "MIT"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.12,<3.13"
 packages = [{ include = "coreml_suite" }]
 dependencies = [
-    # Phase 1 baseline pins: matches the apple_env that last produced working
-    # conversions. Comfy's checkpoint-safe-loading branch (utils.py:33) is gated
-    # on torch>=2.4, so newer torch + numpy 1.23 (ml-sd's pin) breaks at import.
-    # Bump the whole set together in Phase 5; do not bump individually.
+    # Phase 5 toolchain bump: Python 3.12, coremltools 9, torch 2.7.
+    # numpy stays in the 1.24..1.x range — none of our modules need
+    # numpy 2, and coremltools + ml-stable-diffusion's SD UNet trace
+    # hit hard bugs under numpy 2 (`_cast` int(ndarray) strictness and
+    # `view` mixed-Var shape lists). See docs/deps.md.
+    # torch 2.7 is the latest version coremltools 9's PyTorch frontend
+    # has been tested against.
     "python-coreml-stable-diffusion @ git+https://github.com/apple/ml-stable-diffusion.git@e5d960c41a6a4ab200b8db379194127607b1c590",
-    "torch==2.0.1",
-    "coremltools==8.2",
-    "numpy<1.25",
+    "torch>=2.7,<2.8",
+    "coremltools>=9,<10",
+    "numpy>=1.24,<2",
     "overrides",
     "diffusers>=0.22",
     "peft>=0.6.2",
@@ -36,6 +39,40 @@ requires-comfyui = "==ab5413351eee61f3d7f10c74e75286df0058bb18"
 dev = [
     "pillow>=12.2.0",
     "psutil>=7.2.2",
+]
+# ComfyUI runtime deps that aren't part of our package's runtime contract
+# but are needed to spin up the ComfyUI server for Tier 2 / smoke_image.
+# Kept in a uv group so `uv sync --group comfy` brings them in without
+# polluting the published metadata (and without re-bumping our torch pin
+# via `uv pip install -r ComfyUI/requirements.txt`, which would float to
+# the latest torch and break the coremltools 9 compatibility ceiling).
+comfy = [
+    "comfyui-frontend-package==1.14.6",
+    "torchvision",
+    "torchaudio",
+    "torchsde",
+    "einops",
+    "tokenizers>=0.13.3",
+    "safetensors>=0.4.2",
+    "aiohttp>=3.11.8",
+    "yarl>=1.18.0",
+    "kornia>=0.7.1",
+    "spandrel",
+    "soundfile",
+    "sentencepiece",
+]
+
+[tool.uv]
+# Phase 5 toolchain bump: ml-stable-diffusion's setup.py hard-pins
+# numpy<1.24, diffusers==0.30.2 and transformers==4.44.2, which blocks
+# the modern torch / coremltools combo on Python 3.12. Override the
+# four blocking pins; the .unet / .coreml_model symbols we actually
+# import (see docs/deps.md) are stable across the bumped versions.
+override-dependencies = [
+    "numpy>=1.24,<2",
+    "diffusers>=0.30",
+    "transformers>=4.44",
+    "huggingface-hub>=0.24",
 ]
 
 [tool.pytest.ini_options]
