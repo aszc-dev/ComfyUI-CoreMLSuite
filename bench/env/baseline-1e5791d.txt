@@ -1,0 +1,134 @@
+# Phase 1 baseline environment capture
+timestamp_utc: 2026-05-24T14:36:51Z
+repo_sha: 1e5791d1087b4dfb095e7761f05ac4e82c92cf7a
+repo_branch: modernize/phase5-toolchain-bump
+comfyui_dir: /Users/aszczepanski/dev/ComfyUI
+comfyui_sha: ab5413351eee61f3d7f10c74e75286df0058bb18
+python_bin: /Users/aszczepanski/dev/ComfyUI/custom_nodes/ComfyUI-CoreMLSuite/.venv/bin/python
+python_version: Python 3.12.11
+platform_machine: arm64
+platform_uname: Darwin mac-2.home 25.1.0 Darwin Kernel Version 25.1.0: Mon Oct 20 19:33:00 PDT 2025; root:xnu-12377.41.6~2/RELEASE_ARM64_T6020 arm64
+macos_product: macOS
+macos_version: 26.1
+macos_build: 25B78
+
+## python-coreml-stable-diffusion (resolved)
+Name: python-coreml-stable-diffusion
+Version: 1.1.0
+Location: /Users/aszczepanski/dev/ComfyUI/custom_nodes/ComfyUI-CoreMLSuite/.venv/lib/python3.12/site-packages
+Requires: coremltools, diffusers, diffusionkit, huggingface-hub, invisible-watermark, matplotlib, numpy, pytest, safetensors, scikit-learn, scipy, torch, transformers
+Required-by:
+
+## python-coreml-stable-diffusion installed git metadata
+{"url":"https://github.com/apple/ml-stable-diffusion.git","vcs_info":{"vcs":"git","commit_id":"e5d960c41a6a4ab200b8db379194127607b1c590","requested_revision":"e5d960c41a6a4ab200b8db379194127607b1c590"}}
+
+## coremltools version
+scikit-learn version 1.7.2 is not supported. Minimum required version: 0.17. Maximum required version: 1.5.1. Disabling scikit-learn conversion API.
+Torch version 2.7.1 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
+coremltools 9.0
+
+## torch version
+torch 2.7.1
+
+## numpy version
+numpy 1.26.4
+
+## freeze
+accelerate==1.13.0
+aiohappyeyeballs==2.6.2
+aiohttp==3.13.5
+aiosignal==1.4.0
+annotated-types==0.7.0
+antlr4-python3-runtime==4.9.3
+argmaxtools==0.1.23
+attrs==26.1.0
+beartype==0.22.9
+cattrs==26.1.0
+certifi==2026.5.20
+cffi==2.0.0
+charset-normalizer==3.4.7
+click==8.4.1
+comfyui-frontend-package==1.14.6
+contourpy==1.3.2
+coremltools==9.0
+cycler==0.12.1
+diffusers==0.30.2
+diffusionkit==0.4.0
+einops==0.8.2
+filelock==3.29.0
+fonttools==4.63.0
+frozenlist==1.8.0
+fsspec==2026.4.0
+gitdb==4.0.12
+gitpython==3.1.50
+huggingface-hub==0.24.6
+idna==3.16
+importlib-metadata==9.0.0
+iniconfig==2.3.0
+invisible-watermark==0.2.0
+jaxtyping==0.3.9
+jinja2==3.1.6
+joblib==1.5.3
+kiwisolver==1.5.0
+kornia==0.8.3
+kornia-rs==0.1.14
+markupsafe==3.0.3
+matplotlib==3.10.9
+mlx==0.31.2
+mlx-metal==0.31.2
+mpmath==1.3.0
+multidict==6.7.1
+networkx==3.6.1
+numpy==1.26.4
+omegaconf==2.3.0
+opencv-python==4.11.0.86
+overrides==7.7.0
+packaging==26.2
+peft==0.13.2
+pillow==12.2.0
+platformdirs==4.9.6
+pluggy==1.6.0
+propcache==0.5.2
+protobuf==7.35.0
+psutil==7.2.2
+pyaml==26.2.1
+pycparser==3.0
+pydantic==2.13.4
+pydantic-core==2.46.4
+pygments==2.20.0
+pyparsing==3.3.2
+pytest==9.0.3
+python-coreml-stable-diffusion @ git+https://github.com/apple/ml-stable-diffusion.git@e5d960c41a6a4ab200b8db379194127607b1c590
+python-dateutil==2.9.0.post0
+pywavelets==1.8.0
+pyyaml==6.0.3
+regex==2026.5.9
+requests==2.34.2
+safetensors==0.7.0
+scikit-learn==1.7.2
+scipy==1.15.3
+sentencepiece==0.2.1
+sentry-sdk==2.60.0
+setuptools==81.0.0
+six==1.17.0
+smmap==5.0.3
+soundfile==0.13.1
+spandrel==0.4.2
+sympy==1.14.0
+tabulate==0.10.0
+threadpoolctl==3.6.0
+tokenizers==0.19.1
+torch==2.7.1
+torchaudio==2.11.0
+torchsde==0.2.6
+torchvision==0.22.1
+tqdm==4.67.3
+trampoline==0.1.2
+transformers==4.44.2
+typing-extensions==4.15.0
+typing-inspection==0.4.2
+urllib3==2.7.0
+wadler-lindig==0.1.7
+wandb==0.27.0
+yarl==1.24.2
+zipp==4.1.0
