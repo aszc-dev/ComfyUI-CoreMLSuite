@@ -13,6 +13,11 @@ ATTN_SUFFIX = {
     "ORIGINAL": "orig",
 }
 
+# Phase 6: palettization bits. "none" = no quantization (default; keeps the
+# pre-Phase-6 filename intact so existing workflows still resolve their
+# cached .mlpackage). Numeric values append a `_q<bits>` suffix.
+QUANT_NBITS_VALUES = ("none", "8", "6", "4")
+
 
 def compose_out_name(
     *,
@@ -23,6 +28,7 @@ def compose_out_name(
     controlnet_support: bool,
     attention_implementation: str,
     lora_names: Iterable[str] = (),
+    quantize_nbits: str = "none",
 ) -> str:
     """Build the .mlpackage stem from convert() parameters.
 
@@ -34,13 +40,26 @@ def compose_out_name(
         sorted list; we sort defensively)
       - controlnet adds `_cn`
       - attn suffix is `_se` | `_se2` | `_orig`
+
+    Phase 6 addition:
+      - quantize_nbits "none" (default) appends nothing — existing
+        unquantized .mlpackages keep the old filename
+      - "4" / "6" / "8" appends `_q<bits>` after the attn suffix
     """
+    if quantize_nbits not in QUANT_NBITS_VALUES:
+        raise ValueError(
+            f"quantize_nbits={quantize_nbits!r} not in {QUANT_NBITS_VALUES}"
+        )
     stem = ckpt_name.split(".")[0]
     sorted_names = sorted(lora_names)
     lora_str = "_" + "_".join(name.split(".")[0] for name in sorted_names) if sorted_names else ""
     cn_suffix = "_cn" if controlnet_support else ""
     attn_suffix = "_" + ATTN_SUFFIX[attention_implementation]
-    out_name = f"{stem}{lora_str}_{batch_size}x{width}x{height}{cn_suffix}{attn_suffix}"
+    quant_suffix = f"_q{quantize_nbits}" if quantize_nbits != "none" else ""
+    out_name = (
+        f"{stem}{lora_str}_{batch_size}x{width}x{height}"
+        f"{cn_suffix}{attn_suffix}{quant_suffix}"
+    )
     return out_name.replace(" ", "_")
 
 

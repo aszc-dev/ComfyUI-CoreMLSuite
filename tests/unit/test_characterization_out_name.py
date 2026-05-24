@@ -143,3 +143,55 @@ def test_lora_names_from_params_sorts_by_name():
 
 def test_lora_names_from_params_empty_list():
     assert lora_names_from_params([]) == []
+
+
+# ---------- Phase 6: quantize_nbits suffix ---------------------------------
+
+
+def test_quantize_nbits_none_appends_nothing():
+    """'none' is the default and must keep the pre-Phase-6 filename so
+    existing cached .mlpackages still resolve."""
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+        quantize_nbits="none",
+    )
+    assert out == "dreamshaper_8_1x512x512_se"
+
+
+@pytest.mark.parametrize("nbits,suffix", [("4", "_q4"), ("6", "_q6"), ("8", "_q8")])
+def test_quantize_nbits_appends_q_suffix(nbits, suffix):
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=False,
+        attention_implementation="SPLIT_EINSUM",
+        quantize_nbits=nbits,
+    )
+    assert out == f"dreamshaper_8_1x512x512_se{suffix}"
+
+
+def test_quantize_nbits_with_controlnet_and_lora():
+    out = compose_out_name(
+        ckpt_name="dreamshaper_8.safetensors",
+        batch_size=1, width=512, height=512,
+        controlnet_support=True,
+        attention_implementation="SPLIT_EINSUM",
+        lora_names=["a.safetensors"],
+        quantize_nbits="6",
+    )
+    assert out == "dreamshaper_8_a_1x512x512_cn_se_q6"
+
+
+def test_quantize_nbits_invalid_raises():
+    import pytest as _pytest
+    with _pytest.raises(ValueError, match="quantize_nbits"):
+        compose_out_name(
+            ckpt_name="x.safetensors",
+            batch_size=1, width=512, height=512,
+            controlnet_support=False,
+            attention_implementation="SPLIT_EINSUM",
+            quantize_nbits="16",  # not in {none, 8, 6, 4}
+        )

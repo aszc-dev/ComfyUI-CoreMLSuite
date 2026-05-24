@@ -49,21 +49,32 @@ def main() -> int:
     width = int(os.environ.get("WIDTH", "512"))
     batch_size = int(os.environ.get("BATCH_SIZE", "1"))
     controlnet = os.environ.get("CONTROLNET", "0") not in ("0", "false", "False", "")
+    quantize_nbits = os.environ.get("QUANT_NBITS", "none")
 
     ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
     if not ckpt_path:
         log.error("checkpoint not found: %s under %s", ckpt_name, COMFY_DIR / "models" / "checkpoints")
         return 2
 
-    attn_suffix = {"SPLIT_EINSUM": "se", "SPLIT_EINSUM_V2": "se2", "ORIGINAL": "orig"}[attn]
-    cn_suffix = "_cn" if controlnet else ""
-    stem = ckpt_name.split(".")[0]
-    out_name = f"{stem}_{batch_size}x{width}x{height}{cn_suffix}_{attn_suffix}"
+    from coreml_suite.core.naming import compose_out_name
+
+    out_name = compose_out_name(
+        ckpt_name=ckpt_name,
+        batch_size=batch_size,
+        width=width,
+        height=height,
+        controlnet_support=controlnet,
+        attention_implementation=attn,
+        quantize_nbits=quantize_nbits,
+    )
     unet_out_path = converter.get_out_path("unet", out_name)
 
     log.info("repo_root=%s comfy_dir=%s", REPO_ROOT, COMFY_DIR)
     log.info("ckpt=%s out_name=%s", ckpt_path, out_name)
-    log.info("attn=%s size=%dx%d batch=%d controlnet=%s", attn, width, height, batch_size, controlnet)
+    log.info(
+        "attn=%s size=%dx%d batch=%d controlnet=%s quant=%s",
+        attn, width, height, batch_size, controlnet, quantize_nbits,
+    )
 
     converter.convert(
         ckpt_path=ckpt_path,
@@ -75,6 +86,7 @@ def main() -> int:
         lora_weights=[],
         attn_impl=attn,
         config_path=None,
+        quantize_nbits=quantize_nbits,
     )
 
     target_path = converter.compile_model(out_path=unet_out_path, out_name=out_name, submodule_name="unet")

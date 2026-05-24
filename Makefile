@@ -62,6 +62,18 @@ bench: check-macos-arm
 		--repeats $(REPEATS) \
 		--assumed-steps $(ASSUMED_STEPS)
 
+# Phase 6: quantization tradeoff matrix. Expects the {none, 8, 6, 4}
+# variants to already exist on disk (run `make convert-quant` first or
+# QUANT_NBITS=8 .venv/bin/python bench/scripts/convert_sd15.py).
+bench-quant: check-macos-arm
+	$(PY) bench/scripts/quant_matrix.py
+
+convert-quant: check-macos-arm
+	@for n in 8 6 4; do \
+		echo "=== converting nbits=$$n ==="; \
+		QUANT_NBITS=$$n $(PY) bench/scripts/convert_sd15.py || exit 1; \
+	done
+
 # What CI actually invokes — same as test-unit but echoes the env capture
 # alongside so failed runs land with diagnostics.
 ci-tier0:

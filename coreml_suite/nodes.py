@@ -8,7 +8,11 @@ import folder_paths
 from coreml_suite import COREML_NODE
 from coreml_suite import converter
 from coreml_suite.config import ModelVersion
-from coreml_suite.core.naming import compose_out_name, lora_names_from_params
+from coreml_suite.core.naming import (
+    QUANT_NBITS_VALUES,
+    compose_out_name,
+    lora_names_from_params,
+)
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
@@ -243,6 +247,10 @@ class CoreMLConverter(COREML_NODE):
                     ],
                 ),
                 "controlnet_support": ("BOOLEAN", {"default": False}),
+                # Phase 6: k-means weight palettization. "none" keeps the
+                # pre-Phase-6 behavior and filename, so existing cached
+                # .mlpackages still resolve.
+                "quantize_nbits": (list(QUANT_NBITS_VALUES), {"default": "none"}),
             },
             "optional": {
                 "lora_params": ("LORA_PARAMS",),
@@ -263,6 +271,7 @@ class CoreMLConverter(COREML_NODE):
         attention_implementation,
         compute_unit,
         controlnet_support,
+        quantize_nbits="none",
         lora_params=None,
     ):
         """Converts a LCM model to Core ML.
@@ -297,6 +306,7 @@ class CoreMLConverter(COREML_NODE):
             controlnet_support=controlnet_support,
             attention_implementation=attention_implementation,
             lora_names=lora_names_from_params(lora_params),
+            quantize_nbits=quantize_nbits,
         )
 
         logger.info(f"Converting {ckpt_name} to {out_name}")
@@ -328,6 +338,7 @@ class CoreMLConverter(COREML_NODE):
             lora_weights=lora_weights,
             attn_impl=attention_implementation,
             config_path=config_path,
+            quantize_nbits=quantize_nbits,
         )
         unet_target_path = converter.compile_model(
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"
