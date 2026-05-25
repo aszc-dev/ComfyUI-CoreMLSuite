@@ -47,16 +47,23 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${COMFY_DIR:-}" ]; then echo "COMFY_DIR unset (see docs/ci-m2.md)"; exit 1; fi
+          # Init-in-place rather than `git clone`: COMFY_DIR may already hold the
+          # cached checkpoint (models/checkpoints) or converted .mlmodelc, and
+          # `git clone` refuses a non-empty target. init + fetch + `checkout -f`
+          # populates the ComfyUI tree while leaving untracked files (the
+          # checkpoint, the cached models) untouched — so setup order is free.
           if [ ! -d "$COMFY_DIR/.git" ]; then
-            echo "cloning ComfyUI into $COMFY_DIR"
-            git clone https://github.com/comfyanonymous/ComfyUI.git "$COMFY_DIR"
+            echo "initialising ComfyUI repo in $COMFY_DIR"
+            mkdir -p "$COMFY_DIR"
+            git -C "$COMFY_DIR" init -q
           fi
+          git -C "$COMFY_DIR" remote get-url origin >/dev/null 2>&1 \
+            || git -C "$COMFY_DIR" remote add origin https://github.com/comfyanonymous/ComfyUI.git
           git -C "$COMFY_DIR" fetch --quiet origin
           if [ "$COMFY_MODE" = "latest" ]; then
-            git -C "$COMFY_DIR" checkout --quiet -B master origin/master
-            git -C "$COMFY_DIR" reset --hard --quiet origin/master
+            git -C "$COMFY_DIR" checkout -f -B master origin/master
           else
-            git -C "$COMFY_DIR" checkout --quiet --force "$COMFY_REF"
+            git -C "$COMFY_DIR" checkout -f "$COMFY_REF"
           fi
           COMFY_SHA="$(git -C "$COMFY_DIR" rev-parse HEAD)"
           echo "COMFY_SHA=$COMFY_SHA" >> "$GITHUB_ENV"

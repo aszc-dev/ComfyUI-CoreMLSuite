@@ -58,6 +58,12 @@ half of the matrix has to live on real hardware.
    `Convert UNet variants if missing` step and cached across runs. Override
    the filename with `CKPT_NAME` in the runner `.env` if needed.
 
+   Order is free: do this before or after the first run. The setup step
+   initialises the ComfyUI repo **in place** (`git init`, not `git clone`,
+   which would refuse a non-empty directory) and uses `checkout -f`, which
+   never removes untracked files — so a checkpoint you dropped in first is
+   preserved.
+
 ## Triggers
 
 The Tier 2 workflow (`.github/workflows/tier2.yml`) runs:
