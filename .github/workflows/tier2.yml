@@ -2,7 +2,11 @@ name: Tier 2 — M2 / ANE (self-hosted)
 
 on:
   pull_request:
-    types: [labeled]
+    # `labeled` fires when run-m2 is first added; `synchronize`/`reopened`
+    # re-run on every subsequent push while the label is present, so the
+    # result tracks the PR head instead of going stale. The `if` below keeps
+    # the run gated on the run-m2 label for all pull_request events.
+    types: [labeled, synchronize, reopened]
   schedule:
     # Nightly at 04:00 UTC (~05/06 in PL). Keeps the M2 path honest
     # without burning the runner on every PR.
