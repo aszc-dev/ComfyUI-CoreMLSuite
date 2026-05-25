@@ -7,13 +7,13 @@ half of the matrix has to live on real hardware.
 
 ## One-time runner setup
 
-1. **Install dependencies on the Mac.** Python 3.11.x (matching the
-   `requires-python` pin), `uv`, `git`, plus the ComfyUI checkout at the
-   path the workflow expects (default: `$HOME/dev/ComfyUI`). The
-   workflow reads `COMFY_DIR` from the runner's env.
+1. **Install dependencies on the Mac.** Python 3.12.x (matching the
+   `requires-python = ">=3.12,<3.13"` pin), `uv`, and `git`. The workflow
+   clones and manages the ComfyUI checkout itself (see step 3), so you do
+   not pre-install ComfyUI.
 
    ```bash
-   brew install python@3.11 uv git
+   brew install python@3.12 uv git
    ```
 
 2. **Register the runner.** From the repo Settings → Actions → Runners
@@ -32,41 +32,31 @@ half of the matrix has to live on real hardware.
    ./svc.sh install && ./svc.sh start   # run as a launchd service
    ```
 
-3. **Persist `COMFY_DIR` for the runner.** The workflow needs to know
-   where the ComfyUI checkout lives. Add it to the runner's `.env`:
+3. **Persist `COMFY_DIR` for the runner.** Point it at a **dedicated,
+   runner-owned** ComfyUI directory — **not** your personal dev checkout.
+   The workflow does `git reset --hard` on it and rewrites its
+   `custom_nodes/ComfyUI-CoreMLSuite` symlink, so it must be disposable.
+   Add it to the runner's `.env`:
 
    ```bash
-   echo 'COMFY_DIR=/Users/<you>/dev/ComfyUI' >> ~/actions-runner/.env
+   echo 'COMFY_DIR=/Users/<you>/actions-runner/comfyui' >> ~/actions-runner/.env
    ```
 
-4. **Symlink the node under test into ComfyUI.** `actions/checkout` clones
-   the PR into `$GITHUB_WORKSPACE` (`~/actions-runner/_work/<repo>/<repo>`),
-   but ComfyUI only loads custom nodes from `$COMFY_DIR/custom_nodes/`.
-   Without a link, Tier 2 would spin up the server against a *stale* copy of
-   the node instead of the checked-out PR. Point the load path at the
-   runner's workspace once (the workspace path is stable for a self-hosted
-   runner):
+   You don't have to clone ComfyUI yourself: the `Set up ComfyUI checkout`
+   step clones it on first run, checks out the right ref (latest or the
+   pinned SHA — see *ComfyUI version under test*), installs ComfyUI's deps,
+   and symlinks `$COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite` →
+   `$GITHUB_WORKSPACE` so the server always loads the checked-out PR. If
+   `COMFY_DIR` is a real node directory rather than a symlink, the step
+   fails loudly instead of deleting it.
 
-   ```bash
-   rm -rf "$COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite"
-   ln -s ~/actions-runner/_work/ComfyUI-CoreMLSuite/ComfyUI-CoreMLSuite \
-         "$COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite"
-   ```
-
-   After this, `uv sync`, `pytest`, and the ComfyUI server all run against
-   the same tree.
-
-5. **Pre-convert the baseline SD1.5 model.** The bench step expects
-   `$COMFY_DIR/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc`.
-   Run the conversion once manually:
-
-   ```bash
-   cd $GITHUB_WORKSPACE
-   uv run python bench/scripts/convert_sd15.py
-   ```
-
-   Re-runs of the same combination are a no-op; the converter skips when
-   the .mlmodelc already exists.
+4. **Provide the SD1.5 checkpoint.** Drop
+   `v1-5-pruned-emaonly.safetensors` (~4 GB) into
+   `$COMFY_DIR/models/checkpoints/`. This is the one heavy artifact that
+   stays as a runner-local cache; everything derived from it (the
+   `.mlmodelc` UNet variants) is converted automatically by the
+   `Convert UNet variants if missing` step and cached across runs. Override
+   the filename with `CKPT_NAME` in the runner `.env` if needed.
 
 ## Triggers
 
@@ -79,22 +69,37 @@ The Tier 2 workflow (`.github/workflows/tier2.yml`) runs:
 
 ## ComfyUI version under test
 
-Every Tier 2 run resets `$COMFY_DIR` to **latest `origin/master`** before
-starting the server (`Update ComfyUI to latest master` step). This is a
-deliberate early-warning canary: the suite tracks a moving host, so upstream
-API breakage should surface here — in CI — rather than in a user's install.
-The resolved ComfyUI SHA is written to the job's step summary (and `COMFY_SHA`
-in the env) so any failure says exactly which commit it was tested against.
+Tier 2 runs a **hybrid** strategy, keyed on the trigger, so the suite tracks a
+moving host without making PRs flaky to overnight upstream drift:
 
-This is separate from `pyproject.toml`'s `requires-comfyui` pin, which is the
-**published-compatibility declaration** for the Comfy registry, not the CI
-target. Bump that pin deliberately once a newer ComfyUI is validated; do not
-expect it to match the floating SHA Tier 2 reports.
+| Trigger | ComfyUI ref | ComfyUI deps |
+|---|---|---|
+| **schedule** (nightly) | latest `origin/master` | its own `requirements.txt`, capped by `constraints/comfy-ceiling.txt` |
+| **PR label `run-m2`** / **dispatch** | pinned `requires-comfyui` SHA | the frozen `comfy` uv group |
 
-Because the step does `git reset --hard`, the runner's ComfyUI checkout must
-not hold local commits you care about — treat it as disposable. The symlinked
-`custom_nodes/ComfyUI-CoreMLSuite` lives outside that repo's tracked tree, so
-the reset never touches the node under test.
+- **Nightly = canary.** It pulls the latest ComfyUI and installs *ComfyUI's
+  own* dependency set. The frozen `comfy` uv group cannot track a moving host
+  by hand (a latest checkout needs e.g. `comfyui-frontend-package==1.44.19`,
+  `comfy_aimdo`, `alembic`, `blake3` that an older pin never listed), so latest
+  mode defers to upstream's `requirements.txt`. Upstream API or dependency
+  breakage surfaces here, in CI, instead of in a user's install.
+- **PR / dispatch = reproducible gate.** It checks out the pinned
+  `requires-comfyui` SHA and uses the frozen `comfy` group — the known-good
+  combination — so a PR fails for its own reasons, not because ComfyUI moved.
+
+The resolved ComfyUI SHA and mode are written to the job step summary (and
+`COMFY_SHA` in the env), so any failure names the exact commit it hit.
+
+**The toolchain ceiling is deliberate.** `constraints/comfy-ceiling.txt` caps
+`torch<2.8` / `numpy<2` / `coremltools 9` while installing latest ComfyUI's
+requirements. If upstream ever hard-requires something past those bounds the
+nightly install *fails on purpose* — that is the signal that coremltools /
+`ml-stable-diffusion` need a deliberate Phase-5-style bump, not a silent float
+that would break the ANE path (see `docs/deps.md`).
+
+`pyproject.toml`'s `requires-comfyui` is both the PR-gate ref and the
+published-compatibility declaration for the Comfy registry. Bump it once a
+newer ComfyUI is validated (the nightly canary is what tells you it's safe).
 
 ## Artifacts
 
