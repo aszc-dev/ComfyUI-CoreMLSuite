@@ -5,8 +5,6 @@
   this package's root.
 - Auto-applies tier markers based on the directory a test lives in, so
   individual files don't have to repeat @pytest.mark.unit / .m2.
-- Skips in-progress test scaffolds so they don't break collection (they
-  reference modules / venv layouts that aren't part of this suite).
 """
 import sys
 from pathlib import Path
@@ -19,15 +17,6 @@ COMFY_DIR = REPO_ROOT.parents[1]
 for p in (str(COMFY_DIR), str(REPO_ROOT)):
     if p not in sys.path:
         sys.path.insert(0, p)
-
-
-# Skip WIP test scaffolds; they import modules (coreml_suite.experiments,
-# convert_apple) that are not part of this suite.
-collect_ignore_glob = [
-    "unit/test_experiments.py",
-    "unit/test_unet_conversion.py",
-    "unit/standalone_test.py",
-]
 
 
 _TIER_BY_DIR = {

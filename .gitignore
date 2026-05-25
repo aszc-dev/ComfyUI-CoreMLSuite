@@ -1,11 +1,6 @@
 playground/
-experiments/
 __pycache__/
 models/
 .venv/
-apple_env/
-comfy_env/
-coremlsuite-venv/
-experiment_results/
 test_results/
 tests/m2/_latest_generated.png
