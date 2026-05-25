@@ -249,12 +249,11 @@ class CoreMLConverter(COREML_NODE):
                 "controlnet_support": ("BOOLEAN", {"default": False}),
             },
             "optional": {
-                # Phase 6: k-means weight palettization. Kept optional so
-                # workflows saved before Phase 6 still validate — ComfyUI
-                # rejects a prompt that omits any `required` input. When
-                # omitted it defaults to "none", identical to pre-Phase-6
-                # behavior and filename, so existing cached .mlpackages
-                # still resolve.
+                # k-means weight palettization. Kept optional so workflows
+                # that omit it still validate — ComfyUI rejects a prompt that
+                # omits any `required` input. When omitted it defaults to
+                # "none", identical to unquantized behavior and filename, so
+                # existing cached .mlpackages still resolve.
                 "quantize_nbits": (list(QUANT_NBITS_VALUES), {"default": "none"}),
                 "lora_params": ("LORA_PARAMS",),
             },

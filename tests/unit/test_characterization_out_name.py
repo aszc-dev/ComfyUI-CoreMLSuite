@@ -1,9 +1,9 @@
-"""Phase 2 characterization tests, Phase 3 re-pointed.
+"""Characterization tests for the .mlpackage filename composition.
 
-After Phase 3 the .mlpackage filename composition is the pure
+The filename composition is the pure
 coreml_suite.core.naming.compose_out_name function. CoreMLConverter.convert
-calls it; the previous Phase 2 test had to monkey-patch heavy converter
-internals just to capture the string, which made the test framework-coupled.
+calls it; testing the pure function avoids monkey-patching heavy converter
+internals just to capture the string.
 """
 import pytest
 
@@ -145,11 +145,11 @@ def test_lora_names_from_params_empty_list():
     assert lora_names_from_params([]) == []
 
 
-# ---------- Phase 6: quantize_nbits suffix ---------------------------------
+# ---------- quantize_nbits suffix ------------------------------------------
 
 
 def test_quantize_nbits_none_appends_nothing():
-    """'none' is the default and must keep the pre-Phase-6 filename so
+    """'none' is the default and must keep the unquantized filename so
     existing cached .mlpackages still resolve."""
     out = compose_out_name(
         ckpt_name="dreamshaper_8.safetensors",

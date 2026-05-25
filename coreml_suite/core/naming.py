@@ -1,6 +1,6 @@
 """Pure out_name composition for the Core ML UNet artifact.
 
-Extracted from CoreMLConverter.convert in Phase 3 so the filename contract
+Extracted from CoreMLConverter.convert so the filename contract
 can be tested + reused without instantiating the node. The string is the
 cache key: every workflow that references a converted .mlpackage depends
 on it staying byte-for-byte identical.
@@ -13,8 +13,8 @@ ATTN_SUFFIX = {
     "ORIGINAL": "orig",
 }
 
-# Phase 6: palettization bits. "none" = no quantization (default; keeps the
-# pre-Phase-6 filename intact so existing workflows still resolve their
+# Palettization bits. "none" = no quantization (default; keeps the
+# unquantized filename intact so existing workflows still resolve their
 # cached .mlpackage). Numeric values append a `_q<bits>` suffix.
 QUANT_NBITS_VALUES = ("none", "8", "6", "4")
 
@@ -32,7 +32,7 @@ def compose_out_name(
 ) -> str:
     """Build the .mlpackage stem from convert() parameters.
 
-    Locked behaviour (Phase 2 characterization tests):
+    Locked behaviour (characterization tests):
       - first '.' in ckpt_name wins (`a.b.c.safetensors` -> `a`)
       - spaces collapse to underscores
       - LoRA names are taken stem-only, sorted, joined with '_' and
@@ -41,7 +41,7 @@ def compose_out_name(
       - controlnet adds `_cn`
       - attn suffix is `_se` | `_se2` | `_orig`
 
-    Phase 6 addition:
+    Quantization:
       - quantize_nbits "none" (default) appends nothing — existing
         unquantized .mlpackages keep the old filename
       - "4" / "6" / "8" appends `_q<bits>` after the attn suffix

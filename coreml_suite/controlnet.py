@@ -1,4 +1,4 @@
-"""Phase 3 compatibility shim — re-exports from coreml_suite.core.controlnet."""
+"""Compatibility shim — re-exports from coreml_suite.core.controlnet."""
 from coreml_suite.core.controlnet import (
     chunk_control,
     expand_inputs,

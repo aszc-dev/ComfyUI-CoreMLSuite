@@ -1,14 +1,12 @@
 """Pytest bootstrap for ComfyUI-CoreMLSuite tests.
 
-- Adds the ComfyUI checkout to sys.path so production modules that
-  transitively import `comfy.*` resolve when pytest is invoked from this
-  package's root. Phase 3 will split pure logic into a comfy-free core and
-  this hack can go.
+- Adds the ComfyUI checkout to sys.path so the framework-coupled modules
+  that transitively import `comfy.*` resolve when pytest is invoked from
+  this package's root.
 - Auto-applies tier markers based on the directory a test lives in, so
   individual files don't have to repeat @pytest.mark.unit / .m2.
-- Skips the maintainer's in-progress test scaffolds so they don't break
-  collection (they reference modules / venv layouts that aren't part of
-  Phase 2 scope).
+- Skips in-progress test scaffolds so they don't break collection (they
+  reference modules / venv layouts that aren't part of this suite).
 """
 import sys
 from pathlib import Path
@@ -23,9 +21,8 @@ for p in (str(COMFY_DIR), str(REPO_ROOT)):
         sys.path.insert(0, p)
 
 
-# Skip WIP test scaffolds left in the tree by the maintainer; they import
-# modules (coreml_suite.experiments, convert_apple) that are not part of
-# Phase 2 scope.
+# Skip WIP test scaffolds; they import modules (coreml_suite.experiments,
+# convert_apple) that are not part of this suite.
 collect_ignore_glob = [
     "unit/test_experiments.py",
     "unit/test_unet_conversion.py",

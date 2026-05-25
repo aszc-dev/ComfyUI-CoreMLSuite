@@ -1,10 +1,10 @@
-"""Phase 2 characterization tests for coreml_suite.models.CoreMLInputs.
+"""Characterization tests for coreml_suite.models.CoreMLInputs.
 
 Locks the shape transforms applied by chunks() and coreml_kwargs() for the
 four model variants the suite supports: SD1.5, LCM (SD1.5 + timestep_cond),
 SDXL base (time_ids len 6), and SDXL refiner (time_ids len 5).
 
-These contracts feed the Core ML UNet at runtime; if Phase 3 silently
+These contracts feed the Core ML UNet at runtime; if a refactor silently
 re-shapes them, generation breaks.
 """
 import numpy as np

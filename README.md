@@ -370,21 +370,21 @@ The models used in this workflow are available at the following links:
 
 ![sdxl](./assets/sdxl_conversion.png?raw=true)
 
-## Quantization (Phase 6, opt-in)
+## Quantization (opt-in)
 
 The `Core ML Converter` and `Core ML LCM Converter` nodes accept an
 optional `quantize_nbits` dropdown that runs k-means weight palettization
 (`coremltools.optimize.coreml.palettize_weights`) on the UNet before save.
 
-Values: `none` (default — no quantization, identical to pre-Phase-6
+Values: `none` (default — no quantization, identical to unquantized
 behavior and filenames), `8`, `6`, `4`. The number is appended to the
 .mlpackage stem as `_q<bits>` so quantized and unquantized variants
 coexist on disk and in cache.
 
 ### SD1.5 1×512×512 SPLIT_EINSUM tradeoffs (M2 Pro, ANE)
 
-Measured by `bench/scripts/quant_matrix.py` (20 forward passes, fixed
-seed for the PSNR comparison):
+Measured with 20 UNet forward passes at a fixed seed for the PSNR
+comparison:
 
 | nbits | size (MB) | size vs none | fwd median (ms) | PSNR vs `none` (dB) |
 |---|---:|---:|---:|---:|
@@ -408,7 +408,7 @@ PSNR is comfortably higher (the sampler averages over 20 steps).
   margin, `none` if you want bit-identical output for golden testing.
 
 The default stays `none` so existing workflows produce byte-for-byte
-identical output — the Phase 6 anchor (`tests/m2/test_golden_image.py`)
+identical output — the golden-image anchor (`tests/m2/test_golden_image.py`)
 verifies this on every Tier 2 run.
 
 ## Limitations

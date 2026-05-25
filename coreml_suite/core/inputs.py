@@ -1,7 +1,6 @@
 """Pure transform from torch sampler inputs to Core ML UNet kwargs.
 
-Moved from coreml_suite.models in Phase 3. Behavior unchanged — Phase 2
-characterization tests cover SD1.5 / SDXL base / SDXL refiner / LCM
+Characterization tests cover SD1.5 / SDXL base / SDXL refiner / LCM
 variants and the chunked-batch fan-out.
 """
 import numpy as np

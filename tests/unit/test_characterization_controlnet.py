@@ -1,4 +1,4 @@
-"""Phase 2 characterization tests for coreml_suite.controlnet.
+"""Characterization tests for coreml_suite.controlnet.
 
 Locks shapes + dtypes + zero-fill behavior of expand_inputs / no_control /
 extract_residual_kwargs / chunk_control. These pure helpers feed the Core ML

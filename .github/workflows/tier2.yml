@@ -16,14 +16,14 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        contains(github.event.pull_request.labels.*.name, 'run-m2'))
-    # Self-hosted Mac registered by the maintainer. See docs/ci-m2.md
-    # for runner setup and the COMFY_DIR / checkpoint prerequisites.
+    # Self-hosted Apple Silicon runner. Prerequisites: COMFY_DIR pointing at
+    # a runner-owned ComfyUI clone, plus a cached SD1.5 checkpoint.
     runs-on: [self-hosted, macOS, ARM64, coreml]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      # Hybrid ComfyUI strategy (see docs/ci-m2.md "ComfyUI version under test"):
+      # Hybrid ComfyUI strategy:
       #   - schedule (nightly)  -> latest origin/master + ComfyUI's own
       #     requirements.txt (constrained). Canary for upstream API breakage.
       #   - PR label / dispatch -> the pinned requires-comfyui SHA + the frozen
@@ -46,7 +46,7 @@ jobs:
         # git reset --hard and rewrites custom_nodes). Cloned on first run.
         run: |
           set -euo pipefail
-          if [ -z "${COMFY_DIR:-}" ]; then echo "COMFY_DIR unset (see docs/ci-m2.md)"; exit 1; fi
+          if [ -z "${COMFY_DIR:-}" ]; then echo "COMFY_DIR unset"; exit 1; fi
           # Init-in-place rather than `git clone`: COMFY_DIR may already hold the
           # cached checkpoint (models/checkpoints) or converted .mlmodelc, and
           # `git clone` refuses a non-empty target. init + fetch + `checkout -f`
@@ -95,22 +95,6 @@ jobs:
             uv sync --group comfy
           fi
 
-      - name: Convert UNet variants if missing
-        # Idempotent: converter.convert / compile_model skip when the .mlmodelc
-        # already exists, so this is a no-op once the runner cache is warm.
-        run: |
-          set -euo pipefail
-          for V in none 8 6 4; do
-            if [ "$V" = "none" ]; then SUF=""; else SUF="_q$V"; fi
-            OUT="$COMFY_DIR/models/unet/v1-5-pruned-emaonly_1x512x512_se${SUF}_unet.mlmodelc"
-            if [ -d "$OUT" ]; then echo "skip nbits=$V (exists)"; continue; fi
-            echo "converting nbits=$V"
-            # --no-sync: keep the deps we just installed (latest mode's
-            # ComfyUI requirements / pinned mode's --group comfy); a bare
-            # `uv run` would re-sync to the lock and drop them.
-            QUANT_NBITS="$V" uv run --no-sync python bench/scripts/convert_sd15.py
-          done
-
       - name: Start ComfyUI server (background)
         run: |
           cd "$COMFY_DIR"
@@ -126,28 +110,10 @@ jobs:
           echo "comfy failed to start"; tail -100 /tmp/comfyui-ci.log; exit 1
 
       - name: Run Tier 2 (m2 marker)
+        # The golden-image workflow drives the Core ML Converter node, so the
+        # UNet is converted on demand on the first run and reused from the
+        # runner-local cache afterwards.
         run: uv run --no-sync pytest -m m2 tests/ -v
-
-      - name: Run bench harness (baseline UNet)
-        run: |
-          uv run --no-sync python bench/run.py \
-            --model "$COMFY_DIR/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc" \
-            --compute-units CPU_AND_NE CPU_AND_GPU \
-            --repeats 30 --assumed-steps 20
-
-      - name: Run quantization tradeoff matrix (Phase 6)
-        # Benches none/8/6/4 on ANE and records size / ms-step / PSNR-vs-none
-        # into bench/results/quant_matrix_<sha>.{json,md}.
-        run: uv run --no-sync python bench/scripts/quant_matrix.py
-
-      - name: Upload bench results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bench-results
-          path: |
-            bench/results/*.json
-            bench/results/*.md
 
       - name: Stop ComfyUI server
         if: always()

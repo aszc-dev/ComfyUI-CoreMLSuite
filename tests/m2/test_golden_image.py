@@ -1,4 +1,4 @@
-"""Phase 2 [M2-ANE] golden-image anchor.
+"""[M2-ANE] golden-image anchor.
 
 Runs the e2e SD1.5 + CoreML workflow against a local ComfyUI server, fetches
 the generated PNG, and asserts both:
@@ -14,8 +14,8 @@ regression.
 The 25 dB default reflects empirical drift between Core ML toolchains
 (8.2/np1.23/py3.11/torch2.0 → 9.0/np1.26/py3.12/torch2.7 measured at
 ~29 dB on the SD1.5 baseline; the image is visually identical at that
-level). Bump the threshold up for refactor PRs (Phase 3-style "should
-not change math"), down for toolchain PRs.
+level). Bump the threshold up for refactor PRs ("should not change
+math"), down for toolchain PRs.
 
 Skips entirely on non-Apple-Silicon hosts or when the server / converted
 model is missing, so the unit lane on Linux still passes.
@@ -111,8 +111,7 @@ def _post_workflow_and_collect_png() -> bytes:
     for nid in ("3", "11"):
         if nid in workflow and "seed" in workflow[nid].get("inputs", {}):
             workflow[nid]["inputs"]["seed"] = SEED
-    # Drop the MPS reference branch — torch 2.0.1 MPS path is broken on macOS 26
-    # (see Phase 1 gate report). Only the Core ML pipeline is needed here.
+    # Drop the MPS reference branch — only the Core ML pipeline is needed here.
     for nid in ("3", "8", "9"):
         workflow.pop(nid, None)
 

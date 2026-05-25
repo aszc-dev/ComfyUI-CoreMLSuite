@@ -1,7 +1,7 @@
 """Pure helpers around the ControlNet residual inputs of the Core ML UNet.
 
-Moved from coreml_suite.controlnet in Phase 3. Behavior unchanged — Phase 2
-characterization tests cover shapes, dtype (fp16), and zero-fill fallback.
+Re-exported by coreml_suite.controlnet. Characterization tests cover
+shapes, dtype (fp16), and zero-fill fallback.
 """
 from itertools import chain
 from math import ceil

@@ -1,7 +1,7 @@
 """Framework-coupled glue between Core ML UNets and ComfyUI's sampler stack.
 
 Pure math (CoreMLInputs, SDXL detection, time_ids/text_embeds assembly,
-sdxl_model_function_wrapper) lives in coreml_suite.core.* after Phase 3.
+sdxl_model_function_wrapper) lives in coreml_suite.core.*.
 This module is what touches comfy.*: model_base, ModelPatcher, the
 diffusion_model wrapper, and the maintainer-facing add_sdxl_model_options
 adapter.

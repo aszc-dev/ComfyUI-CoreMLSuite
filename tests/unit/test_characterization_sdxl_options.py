@@ -1,6 +1,6 @@
-"""Phase 2 characterization tests, Phase 3 re-pointed.
+"""Characterization tests for the SDXL options math.
 
-After Phase 3 the SDXL time_ids / text_embeds math lives in
+The SDXL time_ids / text_embeds math lives in
 coreml_suite.core.sdxl as pure builders. The framework adapter
 add_sdxl_model_options (in models.py) is exercised separately by the m2
 golden image test; here we just lock the pure math.
@@ -95,7 +95,7 @@ def test_wrapper_captures_time_ids_text_embeds_refiner_via_closure():
 
 def test_wrapper_returns_zero_when_context_missing():
     """When c_crossattn is None the wrapper short-circuits to zeros_like(x).
-    Locked here because Phase 3 mustn't change this default."""
+    Locked here because the refactor mustn't change this default."""
     wrapper = sdxl_model_function_wrapper(torch.zeros(2, 6), torch.zeros(2, 1280))
     x = torch.randn(2, 4, 16, 16)
     out = wrapper(

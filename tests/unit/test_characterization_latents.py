@@ -1,7 +1,7 @@
-"""Phase 2 characterization tests for coreml_suite.latents.
+"""Characterization tests for coreml_suite.latents.
 
 Locks the *current* behavior of chunk_batch / merge_chunks — including the
-zero-pad regions and the truncation in merge — so the Phase 3 refactor
+zero-pad regions and the truncation in merge — so a refactor
 cannot silently shift either contract.
 """
 import pytest
@@ -110,7 +110,7 @@ def test_merge_chunks_truncates_padding():
 
 def test_merge_chunks_singleton_returns_equal_copy_when_shape_matches():
     """A singleton chunk list still goes through torch.cat, so we get a new
-    tensor equal to the input — locked here because Phase 3 might be tempted
+    tensor equal to the input — locked here because a refactor might be tempted
     to short-circuit and accidentally return the same object."""
     x = _const_tensor(2)
     out = merge_chunks([x], x.shape)

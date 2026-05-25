@@ -1,4 +1,4 @@
-"""Phase 3 gate: prove the Tier-0 lane is framework-free.
+"""Gate: prove the Tier-0 lane is framework-free.
 
 In a pure `pytest -m unit` run, none of the banned runtime modules
 (comfy, coremltools, python_coreml_stable_diffusion, folder_paths,

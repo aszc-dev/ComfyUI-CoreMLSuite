@@ -23,8 +23,8 @@ jobs:
       - name: Install Tier 0 deps
         run: |
           python -m pip install --upgrade pip
-          # Pins mirror pyproject (Phase 1 baseline). Tier 0 only needs
-          # torch + numpy + pytest; everything else is Mac-only.
+          # Tier 0 only needs torch + numpy + pytest; everything else
+          # is Mac-only.
           python -m pip install \
             "torch==2.0.1" "numpy<1.25" \
             "pytest>=8" "pytest-xdist"

@@ -6,11 +6,11 @@ license = "MIT"
 requires-python = ">=3.12,<3.13"
 packages = [{ include = "coreml_suite" }]
 dependencies = [
-    # Phase 5 toolchain bump: Python 3.12, coremltools 9, torch 2.7.
+    # Python 3.12, coremltools 9, torch 2.7.
     # numpy stays in the 1.24..1.x range — none of our modules need
     # numpy 2, and coremltools + ml-stable-diffusion's SD UNet trace
     # hit hard bugs under numpy 2 (`_cast` int(ndarray) strictness and
-    # `view` mixed-Var shape lists). See docs/deps.md.
+    # `view` mixed-Var shape lists).
     # torch 2.7 is the latest version coremltools 9's PyTorch frontend
     # has been tested against.
     "python-coreml-stable-diffusion @ git+https://github.com/apple/ml-stable-diffusion.git@e5d960c41a6a4ab200b8db379194127607b1c590",
@@ -31,8 +31,7 @@ Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
 PublisherId = "aszc-dev"
 DisplayName = "ComfyUI-CoreMLSuite"
 Icon = ""
-# Pinned to the ComfyUI commit this Phase 1 baseline was validated against.
-# Bump together with the toolchain upgrade in Phase 5.
+# Pinned to the ComfyUI commit this toolchain was validated against.
 requires-comfyui = "==ab5413351eee61f3d7f10c74e75286df0058bb18"
 
 [dependency-groups]
@@ -41,7 +40,7 @@ dev = [
     "psutil>=7.2.2",
 ]
 # ComfyUI runtime deps that aren't part of our package's runtime contract
-# but are needed to spin up the ComfyUI server for Tier 2 / smoke_image.
+# but are needed to spin up the ComfyUI server for Tier 2 integration tests.
 # Kept in a uv group so `uv sync --group comfy` brings them in without
 # polluting the published metadata (and without re-bumping our torch pin
 # via `uv pip install -r ComfyUI/requirements.txt`, which would float to
@@ -63,11 +62,11 @@ comfy = [
 ]
 
 [tool.uv]
-# Phase 5 toolchain bump: ml-stable-diffusion's setup.py hard-pins
-# numpy<1.24, diffusers==0.30.2 and transformers==4.44.2, which blocks
-# the modern torch / coremltools combo on Python 3.12. Override the
-# four blocking pins; the .unet / .coreml_model symbols we actually
-# import (see docs/deps.md) are stable across the bumped versions.
+# ml-stable-diffusion's setup.py hard-pins numpy<1.24, diffusers==0.30.2
+# and transformers==4.44.2, which blocks the modern torch / coremltools
+# combo on Python 3.12. Override the four blocking pins; the .unet /
+# .coreml_model symbols we actually import are stable across the bumped
+# versions.
 override-dependencies = [
     "numpy>=1.24,<2",
     "diffusers>=0.30",
@@ -76,14 +75,13 @@ override-dependencies = [
 ]
 
 [tool.pytest.ini_options]
-# Phase 2: tier markers gate which environment a test needs.
-# - unit: framework-free pure-logic tests (Tier 0; future Phase 3 will run
-#   these without ComfyUI on Linux). For now they may still transitively
-#   import comfy.
+# Tier markers gate which environment a test needs.
+# - unit: framework-free pure-logic tests (Tier 0; run without ComfyUI on
+#   Linux).
 # - m2:   needs an Apple Silicon Mac with the Neural Engine (Tier 2),
-#   typically the maintainer's self-hosted runner or local M-series box.
+#   typically a self-hosted runner or local M-series box.
 # - smoke: lightweight checks that need Apple Silicon + coremltools but no
-#   ANE/real model (reserved for Phase 4 Tier 1 smoke harness).
+#   ANE/real model (Tier 1).
 markers = [
     "unit: framework-free unit test (Tier 0)",
     "m2: requires Apple Silicon + Neural Engine (Tier 2)",

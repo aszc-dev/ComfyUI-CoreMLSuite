@@ -1,8 +1,7 @@
-"""Original smoke tests, re-pointed at coreml_suite.core.* in Phase 3.
+"""Smoke tests for the pure batch-chunking helpers in coreml_suite.core.
 
-Drops the `from comfy.model_management import get_torch_device` import
-(replaced with torch.device('cpu') so Tier 0 runs without ComfyUI) and the
-dead `model_config` fixture (defined in Phase 1 but never consumed).
+Uses torch.device('cpu') instead of comfy.model_management.get_torch_device
+so Tier 0 runs without ComfyUI.
 """
 import pytest
 import torch

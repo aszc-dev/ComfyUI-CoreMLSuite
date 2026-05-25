@@ -1,8 +1,8 @@
 """Pure batch-chunking helpers for Core ML's fixed-shape UNet inputs.
 
-Moved from coreml_suite.latents in Phase 3. Behavior unchanged — Phase 2
-characterization tests cover the contract (padding-zero regions, truncation
-in merge_chunks, identity-passthrough when shape already matches).
+Re-exported by coreml_suite.latents. Characterization tests cover the
+contract (padding-zero regions, truncation in merge_chunks,
+identity-passthrough when shape already matches).
 """
 import torch
 

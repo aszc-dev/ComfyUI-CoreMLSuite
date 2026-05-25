@@ -1,9 +1,9 @@
 """Pure SDXL detection + time_ids/text_embeds assembly.
 
-Moved from coreml_suite.models in Phase 3. The framework-coupled adapter
-`add_sdxl_model_options` lives in models.py and now delegates the math
-here. Phase 2 characterization tests cover base (len 6) vs refiner
-(len 5) and the closure free-vars produced by `sdxl_model_function_wrapper`.
+The framework-coupled adapter `add_sdxl_model_options` lives in models.py
+and delegates the math here. Characterization tests cover base (len 6) vs
+refiner (len 5) and the closure free-vars produced by
+`sdxl_model_function_wrapper`.
 """
 import torch
 

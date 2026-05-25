@@ -307,8 +307,8 @@ def convert_unet(
     gc.collect()
 
     if quantize_nbits != "none":
-        # Phase 6: opt-in k-means weight palettization. Default path
-        # (quantize_nbits="none") is byte-for-byte unchanged from Phase 5.
+        # Opt-in k-means weight palettization. The default path
+        # (quantize_nbits="none") leaves the traced UNet untouched.
         from coremltools.optimize.coreml import (
             OpPalettizerConfig,
             OptimizationConfig,
