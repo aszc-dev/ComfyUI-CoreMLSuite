@@ -7,8 +7,6 @@ from coreml_suite.coreml_model import CoreMLModel
 
 LEGACY_CONVERTER_MODULES = {
     "diffusers",
-    "overrides",
-    "python_coreml_stable_diffusion",
     "transformers",
 }
 
@@ -60,9 +58,9 @@ class COREML_CONVERT_LCM(COREML_NODE):
             if exc.name in LEGACY_CONVERTER_MODULES:
                 raise RuntimeError(
                     "The legacy LCM converter requires "
-                    "apple/ml-stable-diffusion and its supporting conversion "
-                    "dependencies. Loading and sampling existing Core ML models "
-                    "no longer require those dependencies."
+                    "the conversion dependency set. These dependencies are part "
+                    "of the default installation; reinstall the package if this "
+                    "message appears."
                 ) from exc
             raise
 

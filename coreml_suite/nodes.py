@@ -5,7 +5,6 @@ from coremltools import ComputeUnit
 import folder_paths
 from coreml_suite import COREML_NODE
 from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
-from coreml_suite.config import ModelVersion
 from coreml_suite.coreml_model import CoreMLModel
 from coreml_suite.core.naming import (
     QUANT_NBITS_VALUES,
@@ -14,6 +13,7 @@ from coreml_suite.core.naming import (
 )
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
+from coreml_suite.model_version import ModelVersion
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
@@ -26,9 +26,8 @@ from coreml_suite.models import (
 LEGACY_CONVERTER_MODULES = {
     "diffusers",
     "omegaconf",
-    "overrides",
     "peft",
-    "python_coreml_stable_diffusion",
+    "transformers",
 }
 
 
@@ -331,9 +330,9 @@ class CoreMLConverter(COREML_NODE):
             if exc.name in LEGACY_CONVERTER_MODULES:
                 raise RuntimeError(
                     "The legacy checkpoint converter requires "
-                    "apple/ml-stable-diffusion and its supporting conversion "
-                    "dependencies. Loading and sampling existing Core ML models "
-                    "no longer require those dependencies."
+                    "the conversion dependency set. These dependencies are part "
+                    "of the default installation; reinstall the package if this "
+                    "message appears."
                 ) from exc
             raise
 

@@ -1,32 +1,28 @@
 [project]
 name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
-version = "1.0.1"
+version = "1.1.0"
 license = "MIT"
 requires-python = ">=3.12,<3.13"
 packages = [{ include = "coreml_suite" }]
 dependencies = [
-    # Python 3.12, coremltools 9, torch 2.7.
-    # The legacy converter still imports apple/ml-stable-diffusion when used,
-    # but the runtime package must stay installable with current ComfyUI's
-    # NumPy 2 toolchain.
-    # torch 2.7 is the latest version coremltools 9's PyTorch frontend
-    # has been tested against.
     "torch>=2.7,<2.8",
     "coremltools>=9,<10",
     "numpy>=2,<3",
+    "diffusers>=0.30",
+    "peft>=0.13",
+    "omegaconf>=2.3",
+    "transformers>=4.44",
 ]
 
 [project.urls]
 Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
-#  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
 PublisherId = "aszc-dev"
 DisplayName = "ComfyUI-CoreMLSuite"
 Icon = ""
-# Pinned to the ComfyUI commit this toolchain was validated against.
-requires-comfyui = "==ab5413351eee61f3d7f10c74e75286df0058bb18"
+requires-comfyui = ">=0.3.27"
 
 [dependency-groups]
 dev = [
@@ -34,12 +30,6 @@ dev = [
     "psutil>=7.2.2",
     "pytest>=9.0.3",
 ]
-# ComfyUI runtime deps that aren't part of our package's runtime contract
-# but are needed to spin up a ComfyUI server for local integration testing.
-# Kept in a uv group so `uv sync --group comfy` brings them in without
-# polluting the published metadata (and without re-bumping our torch pin
-# via `uv pip install -r ComfyUI/requirements.txt`, which would float to
-# the latest torch and break the coremltools 9 compatibility ceiling).
 comfy = [
     "comfyui-frontend-package==1.14.6",
     "torchvision",
@@ -57,17 +47,9 @@ comfy = [
 ]
 
 [tool.pytest.ini_options]
-# Tier markers gate which environment a test needs.
-# - unit: framework-free pure-logic tests (Tier 0; run without ComfyUI on
-#   Linux).
-# - smoke: lightweight checks that need Apple Silicon + coremltools but no
-#   ANE/real model (Tier 1).
 markers = [
     "unit: framework-free unit test (Tier 0)",
     "smoke: macOS-ARM smoke test on a synthetic micro-model (Tier 1)",
 ]
 testpaths = ["tests"]
-# importlib mode keeps pytest from importing the repo-root __init__.py
-# (which is the ComfyUI custom-node entry and pulls in comfy + nodes).
-# Without this Tier-0 leaks the entire ComfyUI runtime on collection.
 addopts = ["--import-mode=importlib", "--confcutdir=tests"]

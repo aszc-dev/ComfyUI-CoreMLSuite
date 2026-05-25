@@ -1,5 +1,5 @@
-from overrides import overrides
-from python_coreml_stable_diffusion.unet import UNet2DConditionModel, TimestepEmbedding
+from diffusers import UNet2DConditionModel
+from diffusers.models.embeddings import TimestepEmbedding
 
 
 class UNet2DConditionModelLCM(UNet2DConditionModel):
@@ -17,7 +17,6 @@ class UNet2DConditionModelLCM(UNet2DConditionModel):
         )
         self.time_embedding = time_embedding
 
-    @overrides(check_signature=False)
     def forward(
         self,
         sample,

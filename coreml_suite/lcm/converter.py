@@ -9,13 +9,12 @@ import torch
 from diffusers import UNet2DConditionModel, LCMScheduler
 from diffusers.loaders import LoraLoaderMixin
 
-from comfy.model_management import get_torch_device
-from coreml_suite.lcm.unet import UNet2DConditionModelLCM
+from coreml_suite.conversion.attention import apply_attention_implementation
+from coreml_suite.conversion.shapes import conv2d_output_shape
+from coreml_suite.conversion.unet import CoreMLUNetWrapper
+from coreml_suite.model_version import ModelVersion
 
-from transformers import CLIPTextModel
 import coremltools as ct
-
-from folder_paths import get_folder_paths
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -23,10 +22,7 @@ logger.setLevel(logging.DEBUG)
 
 MODEL_VERSION = "SimianLuo/LCM_Dreamshaper_v7"
 MODEL_NAME = MODEL_VERSION.split("/")[-1] + "_4k"
-
-import python_coreml_stable_diffusion.unet as unet
-
-unet.ATTENTION_IMPLEMENTATION_IN_EFFECT = unet.AttentionImplementations.SPLIT_EINSUM
+TEXT_TOKEN_SEQUENCE_LENGTH = 77
 
 
 def get_unets():
@@ -37,31 +33,28 @@ def get_unets():
         low_cpu_mem_usage=False,
     )
 
-    cml_unet = UNet2DConditionModelLCM.from_config(ref_unet.config).eval()
-    cml_unet.load_state_dict(ref_unet.state_dict(), strict=False)
+    cml_unet = CoreMLUNetWrapper(
+        apply_attention_implementation(ref_unet.eval(), "SPLIT_EINSUM"),
+        ModelVersion.LCM,
+    )
 
     return cml_unet, ref_unet
 
 
 def get_encoder_hidden_states_shape(unet_config, batch_size):
-    text_encoder = CLIPTextModel.from_pretrained(
-        MODEL_VERSION, subfolder="text_encoder"
-    )
-
-    text_token_sequence_length = text_encoder.config.max_position_embeddings
-    hidden_size = (text_encoder.config.hidden_size,)
-
     encoder_hidden_states_shape = (
         batch_size,
-        unet_config.cross_attention_dim or hidden_size,
+        unet_config.cross_attention_dim,
         1,
-        text_token_sequence_length,
+        TEXT_TOKEN_SEQUENCE_LENGTH,
     )
 
     return encoder_hidden_states_shape
 
 
 def get_scheduler():
+    from comfy.model_management import get_torch_device
+
     scheduler = LCMScheduler.from_pretrained(MODEL_VERSION, subfolder="scheduler")
     scheduler.set_timesteps(50, get_torch_device(), 50)
     return scheduler
@@ -117,6 +110,8 @@ def convert_to_coreml(
 
 
 def get_out_path(submodule_name, model_name):
+    from folder_paths import get_folder_paths
+
     fname = f"{model_name}_{submodule_name}.mlpackage"
     unet_path = get_folder_paths(submodule_name)[0]
     out_path = os.path.join(unet_path, fname)
@@ -165,15 +160,13 @@ def get_unet_inputs_spec(sample_unet_inputs):
 
 
 def add_cnet_support(sample_shape, reference_unet):
-    from python_coreml_stable_diffusion.unet import calculate_conv2d_output_shape
-
     additional_residuals_shapes = []
 
     batch_size = sample_shape[0]
     h, w = sample_shape[2:]
 
     # conv_in
-    out_h, out_w = calculate_conv2d_output_shape(
+    out_h, out_w = conv2d_output_shape(
         h,
         w,
         reference_unet.conv_in,
@@ -190,9 +183,7 @@ def add_cnet_support(sample_shape, reference_unet):
         ]
         if hasattr(down_block, "downsamplers") and down_block.downsamplers is not None:
             for downsampler in down_block.downsamplers:
-                out_h, out_w = calculate_conv2d_output_shape(
-                    out_h, out_w, downsampler.conv
-                )
+                out_h, out_w = conv2d_output_shape(out_h, out_w, downsampler.conv)
             additional_residuals_shapes.append(
                 (
                     batch_size,
@@ -273,6 +264,8 @@ def convert(
 
 
 def compile_model(out_path, out_name):
+    from folder_paths import get_folder_paths
+
     # Compile the model
     target_path = compile_coreml_model(
         out_path, get_folder_paths("unet")[0], f"{out_name}_unet"

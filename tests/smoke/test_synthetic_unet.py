@@ -15,11 +15,14 @@ Auto-skips on non-Apple-Silicon hosts so Tier 0 CI on Linux ignores it.
 """
 import platform
 import shutil
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+
+from coreml_suite.conversion.unet import CoreMLUNetWrapper
 
 
 pytestmark = pytest.mark.skipif(
@@ -51,12 +54,22 @@ class TinyUNet(nn.Module):
         self.time_proj = nn.Linear(1, 8)
         self.text_proj = nn.Linear(64, 8)
 
-    def forward(self, sample, timestep, encoder_hidden_states):
+    def forward(
+        self,
+        sample,
+        timestep,
+        encoder_hidden_states,
+        timestep_cond=None,
+        added_cond_kwargs=None,
+        down_block_additional_residuals=None,
+        mid_block_additional_residual=None,
+        return_dict=True,
+    ):
         h = self.conv_in(sample)
         t_emb = self.time_proj(timestep.unsqueeze(-1)).view(1, 8, 1, 1)
-        c_emb = self.text_proj(encoder_hidden_states.squeeze(2).mean(-1)).view(1, 8, 1, 1)
+        c_emb = self.text_proj(encoder_hidden_states.mean(1)).view(1, 8, 1, 1)
         h = h + t_emb + c_emb
-        return self.conv_out(h)
+        return (self.conv_out(h),)
 
 
 @pytest.fixture(scope="module")
@@ -65,7 +78,10 @@ def tiny_mlpackage(tmp_path_factory):
     import coremltools as ct
 
     torch.manual_seed(0)
-    model = TinyUNet().eval()
+    model = CoreMLUNetWrapper(
+        TinyUNet().eval(),
+        SimpleNamespace(name="SD15"),
+    )
     example = (
         torch.randn(*SAMPLE_SHAPE),
         torch.randn(*TIMESTEP_SHAPE),
