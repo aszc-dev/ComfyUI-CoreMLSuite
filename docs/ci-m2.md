@@ -39,7 +39,24 @@ half of the matrix has to live on real hardware.
    echo 'COMFY_DIR=/Users/<you>/dev/ComfyUI' >> ~/actions-runner/.env
    ```
 
-4. **Pre-convert the baseline SD1.5 model.** The bench step expects
+4. **Symlink the node under test into ComfyUI.** `actions/checkout` clones
+   the PR into `$GITHUB_WORKSPACE` (`~/actions-runner/_work/<repo>/<repo>`),
+   but ComfyUI only loads custom nodes from `$COMFY_DIR/custom_nodes/`.
+   Without a link, Tier 2 would spin up the server against a *stale* copy of
+   the node instead of the checked-out PR. Point the load path at the
+   runner's workspace once (the workspace path is stable for a self-hosted
+   runner):
+
+   ```bash
+   rm -rf "$COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite"
+   ln -s ~/actions-runner/_work/ComfyUI-CoreMLSuite/ComfyUI-CoreMLSuite \
+         "$COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite"
+   ```
+
+   After this, `uv sync`, `pytest`, and the ComfyUI server all run against
+   the same tree.
+
+5. **Pre-convert the baseline SD1.5 model.** The bench step expects
    `$COMFY_DIR/models/unet/v1-5-pruned-emaonly_1x512x512_se_unet.mlmodelc`.
    Run the conversion once manually:
 
@@ -59,6 +76,25 @@ The Tier 2 workflow (`.github/workflows/tier2.yml`) runs:
   into the ANE lane (the runner is not free; default off).
 - **Nightly at 04:00 UTC** via `schedule:`.
 - **Manually** via the workflow_dispatch button.
+
+## ComfyUI version under test
+
+Every Tier 2 run resets `$COMFY_DIR` to **latest `origin/master`** before
+starting the server (`Update ComfyUI to latest master` step). This is a
+deliberate early-warning canary: the suite tracks a moving host, so upstream
+API breakage should surface here — in CI — rather than in a user's install.
+The resolved ComfyUI SHA is written to the job's step summary (and `COMFY_SHA`
+in the env) so any failure says exactly which commit it was tested against.
+
+This is separate from `pyproject.toml`'s `requires-comfyui` pin, which is the
+**published-compatibility declaration** for the Comfy registry, not the CI
+target. Bump that pin deliberately once a newer ComfyUI is validated; do not
+expect it to match the floating SHA Tier 2 reports.
+
+Because the step does `git reset --hard`, the runner's ComfyUI checkout must
+not hold local commits you care about — treat it as disposable. The symlinked
+`custom_nodes/ComfyUI-CoreMLSuite` lives outside that repo's tracked tree, so
+the reset never touches the node under test.
 
 ## Artifacts
 

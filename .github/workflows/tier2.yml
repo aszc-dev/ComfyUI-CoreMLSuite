@@ -26,16 +26,35 @@ jobs:
       - name: uv sync
         run: uv sync
 
+      - name: Update ComfyUI to latest master (canary)
+        # Tier 2 deliberately tracks the moving host: every run resets the
+        # runner's ComfyUI checkout to origin/master and records the resolved
+        # SHA, so upstream API breakage surfaces here instead of in a user's
+        # install. (pyproject `requires-comfyui` stays the published-compat
+        # declaration; this lane is the early-warning canary, not the contract.)
+        # COMFY_DIR is exported by the self-hosted runner's .env (see docs/ci-m2.md).
+        # The node under test lives at $COMFY_DIR/custom_nodes/ComfyUI-CoreMLSuite,
+        # symlinked to $GITHUB_WORKSPACE at runner-setup time, so this reset does
+        # not touch the checkout being validated.
+        run: |
+          git -C "$COMFY_DIR" fetch --quiet origin
+          git -C "$COMFY_DIR" checkout --quiet master \
+            || git -C "$COMFY_DIR" checkout --quiet -b master origin/master
+          git -C "$COMFY_DIR" reset --hard --quiet origin/master
+          COMFY_SHA="$(git -C "$COMFY_DIR" rev-parse HEAD)"
+          echo "COMFY_SHA=$COMFY_SHA" >> "$GITHUB_ENV"
+          echo "Tier 2 tested against ComfyUI \`$COMFY_SHA\` (latest master)" \
+            >> "$GITHUB_STEP_SUMMARY"
+
       - name: Start ComfyUI server (background)
-        env:
-          COMFY_DIR: ${{ env.COMFY_DIR }}
         run: |
           cd "$COMFY_DIR"
           nohup "$GITHUB_WORKSPACE/.venv/bin/python" main.py --port 8188 --cpu-vae > /tmp/comfyui-ci.log 2>&1 &
-          # Wait for readiness, fail fast if it never comes up.
+          # Poll the HTTP endpoint for readiness — robust to startup-banner
+          # wording / colored-log changes in a floating-latest ComfyUI.
           for _ in $(seq 1 60); do
-            if grep -q "To see the GUI" /tmp/comfyui-ci.log 2>/dev/null; then
-              echo "comfy ready"; exit 0
+            if curl -sf -o /dev/null http://127.0.0.1:8188/system_stats; then
+              echo "comfy ready (ComfyUI ${COMFY_SHA:-unknown})"; exit 0
             fi
             sleep 2
           done
