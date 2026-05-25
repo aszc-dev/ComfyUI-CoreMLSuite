@@ -408,8 +408,7 @@ PSNR is comfortably higher (the sampler averages over 20 steps).
   margin, `none` if you want bit-identical output for golden testing.
 
 The default stays `none` so existing workflows produce byte-for-byte
-identical output — the golden-image anchor (`tests/m2/test_golden_image.py`)
-verifies this on every Tier 2 run.
+identical output.
 
 ## Limitations
 

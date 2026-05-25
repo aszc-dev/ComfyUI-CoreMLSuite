@@ -1,13 +1,12 @@
 import os
 
 from coremltools import ComputeUnit
-from python_coreml_stable_diffusion.coreml_model import CoreMLModel
-from python_coreml_stable_diffusion.unet import AttentionImplementations
 
 import folder_paths
 from coreml_suite import COREML_NODE
-from coreml_suite import converter
+from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
 from coreml_suite.config import ModelVersion
+from coreml_suite.coreml_model import CoreMLModel
 from coreml_suite.core.naming import (
     QUANT_NBITS_VALUES,
     compose_out_name,
@@ -23,6 +22,14 @@ from coreml_suite.models import (
     get_model_patcher,
     get_latent_image,
 )
+
+LEGACY_CONVERTER_MODULES = {
+    "diffusers",
+    "omegaconf",
+    "overrides",
+    "peft",
+    "python_coreml_stable_diffusion",
+}
 
 
 class CoreMLSampler(COREML_NODE, KSampler):
@@ -232,11 +239,7 @@ class CoreMLConverter(COREML_NODE):
                 "width": ("INT", {"default": 512, "min": 256, "max": 2048, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
                 "attention_implementation": (
-                    [
-                        AttentionImplementations.SPLIT_EINSUM.name,
-                        AttentionImplementations.SPLIT_EINSUM_V2.name,
-                        AttentionImplementations.ORIGINAL.name,
-                    ],
+                    list(ATTENTION_IMPLEMENTATIONS),
                 ),
                 "compute_unit": (
                     [
@@ -321,6 +324,18 @@ class CoreMLConverter(COREML_NODE):
             logger.info(f"LoRAs used:")
             for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
+
+        try:
+            from coreml_suite import converter
+        except ModuleNotFoundError as exc:
+            if exc.name in LEGACY_CONVERTER_MODULES:
+                raise RuntimeError(
+                    "The legacy checkpoint converter requires "
+                    "apple/ml-stable-diffusion and its supporting conversion "
+                    "dependencies. Loading and sampling existing Core ML models "
+                    "no longer require those dependencies."
+                ) from exc
+            raise
 
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)

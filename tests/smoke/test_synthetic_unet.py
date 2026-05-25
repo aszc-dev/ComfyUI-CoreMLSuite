@@ -1,13 +1,13 @@
 """Tier 1 smoke: convert a synthetic micro-UNet through coremltools and load
-it back with python_coreml_stable_diffusion's CoreMLModel.
+it back with CoreMLSuite's runtime CoreMLModel wrapper.
 
-Purpose: catch API breakage in coremltools / ml-stable-diffusion *without*
-needing a real SD checkpoint, the ANE, or a converted .mlmodelc on disk.
+Purpose: catch API breakage in coremltools *without* needing a real SD
+checkpoint, the ANE, or a converted .mlmodelc on disk.
 Runs in minutes on a hosted macOS-ARM runner (no Apple internal stuff).
 
 What it asserts:
   - coremltools.convert still accepts the call shape we use today
-  - the resulting .mlpackage round-trips through CoreMLModel
+  - the resulting .mlpackage round-trips through CoreMLSuite's CoreMLModel
   - expected_inputs exposes the input names/shapes we declared
   - calling the model returns the named output (`noise_pred`)
 
@@ -95,7 +95,7 @@ def tiny_mlpackage(tmp_path_factory):
 
 
 def test_coremltools_convert_round_trips_via_coreml_model(tiny_mlpackage):
-    from python_coreml_stable_diffusion.coreml_model import CoreMLModel
+    from coreml_suite.coreml_model import CoreMLModel
 
     model = CoreMLModel(str(tiny_mlpackage), "CPU_ONLY", "packages")
 

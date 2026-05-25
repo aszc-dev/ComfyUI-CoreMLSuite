@@ -1,8 +1,3 @@
-git+https://github.com/apple/ml-stable-diffusion.git@e5d960c41a6a4ab200b8db379194127607b1c590
 torch>=2.7,<2.8
-coremltools==8.2
+coremltools>=9,<10
 numpy>=2,<3
-overrides
-diffusers>=0.22
-peft>=0.6.2
-omegaconf>=2.3

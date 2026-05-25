@@ -1,10 +1,16 @@
 import os
 
 from coremltools import ComputeUnit
-from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
 from coreml_suite import COREML_NODE
-from coreml_suite.lcm import converter as lcm_converter
+from coreml_suite.coreml_model import CoreMLModel
+
+LEGACY_CONVERTER_MODULES = {
+    "diffusers",
+    "overrides",
+    "python_coreml_stable_diffusion",
+    "transformers",
+}
 
 
 class COREML_CONVERT_LCM(COREML_NODE):
@@ -48,6 +54,18 @@ class COREML_CONVERT_LCM(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
+        try:
+            from coreml_suite.lcm import converter as lcm_converter
+        except ModuleNotFoundError as exc:
+            if exc.name in LEGACY_CONVERTER_MODULES:
+                raise RuntimeError(
+                    "The legacy LCM converter requires "
+                    "apple/ml-stable-diffusion and its supporting conversion "
+                    "dependencies. Loading and sampling existing Core ML models "
+                    "no longer require those dependencies."
+                ) from exc
+            raise
+
         h = height
         w = width
         sample_size = (h // 8, w // 8)
