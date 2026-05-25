@@ -1,0 +1,33 @@
+name: Tier 0 — Unit (Linux)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Minimal-deps run: Tier 0 must work without ComfyUI, coremltools, or
+# python_coreml_stable_diffusion (Linux CI image won't have them). The
+# in-tree purity gate (tests/unit/test_tier0_purity.py) double-checks
+# that the suite hasn't started leaking framework imports.
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Tier 0 deps
+        run: |
+          python -m pip install --upgrade pip
+          # Tier 0 only needs torch + numpy + pytest; everything else
+          # is Mac-only.
+          python -m pip install \
+            "torch==2.0.1" "numpy<1.25" \
+            "pytest>=8" "pytest-xdist"
+
+      - name: Run Tier 0
+        run: pytest -m unit tests/ -v

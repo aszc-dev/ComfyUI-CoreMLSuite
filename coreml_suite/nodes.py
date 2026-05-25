@@ -8,6 +8,11 @@ import folder_paths
 from coreml_suite import COREML_NODE
 from coreml_suite import converter
 from coreml_suite.config import ModelVersion
+from coreml_suite.core.naming import (
+    QUANT_NBITS_VALUES,
+    compose_out_name,
+    lora_names_from_params,
+)
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
@@ -244,6 +249,12 @@ class CoreMLConverter(COREML_NODE):
                 "controlnet_support": ("BOOLEAN", {"default": False}),
             },
             "optional": {
+                # k-means weight palettization. Kept optional so workflows
+                # that omit it still validate — ComfyUI rejects a prompt that
+                # omits any `required` input. When omitted it defaults to
+                # "none", identical to unquantized behavior and filename, so
+                # existing cached .mlpackages still resolve.
+                "quantize_nbits": (list(QUANT_NBITS_VALUES), {"default": "none"}),
                 "lora_params": ("LORA_PARAMS",),
             },
         }
@@ -262,6 +273,7 @@ class CoreMLConverter(COREML_NODE):
         attention_implementation,
         compute_unit,
         controlnet_support,
+        quantize_nbits="none",
         lora_params=None,
     ):
         """Converts a LCM model to Core ML.
@@ -288,23 +300,16 @@ class CoreMLConverter(COREML_NODE):
         h = height
         w = width
         sample_size = (h // 8, w // 8)
-        batch_size = batch_size
-        cn_support_str = "_cn" if controlnet_support else ""
-        lora_str = (
-            "_" + "_".join(lora_param[0].split(".")[0] for lora_param in lora_params)
-            if lora_params
-            else ""
+        out_name = compose_out_name(
+            ckpt_name=ckpt_name,
+            batch_size=batch_size,
+            width=w,
+            height=h,
+            controlnet_support=controlnet_support,
+            attention_implementation=attention_implementation,
+            lora_names=lora_names_from_params(lora_params),
+            quantize_nbits=quantize_nbits,
         )
-
-        attn_str = (
-            "_"
-            + {"SPLIT_EINSUM": "se", "SPLIT_EINSUM_V2": "se2", "ORIGINAL": "orig"}[
-                attention_implementation
-            ]
-        )
-
-        out_name = f"{ckpt_name.split('.')[0]}{lora_str}_{batch_size}x{w}x{h}{cn_support_str}{attn_str}"
-        out_name = out_name.replace(" ", "_")
 
         logger.info(f"Converting {ckpt_name} to {out_name}")
         logger.info(f"Batch size: {batch_size}")
@@ -335,6 +340,7 @@ class CoreMLConverter(COREML_NODE):
             lora_weights=lora_weights,
             attn_impl=attention_implementation,
             config_path=config_path,
+            quantize_nbits=quantize_nbits,
         )
         unet_target_path = converter.compile_model(
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"

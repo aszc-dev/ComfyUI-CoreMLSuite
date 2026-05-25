@@ -1,0 +1,31 @@
+name: Tier 1 — Smoke (macOS-ARM)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Gate behind the run-tier1 label too, so external PRs that touch
+    # only docs don't burn a minute of macOS-ARM time. Maintainers can
+    # always re-run via the run-tier1 label.
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  smoke:
+    if: |
+      github.event_name == 'push' ||
+      github.event.action != 'labeled' ||
+      contains(github.event.pull_request.labels.*.name, 'run-tier1')
+    runs-on: macos-14  # M1, Apple Silicon hosted runner
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: uv sync
+        run: uv sync --no-install-project
+
+      - name: Run Tier 1 (synthetic micro-UNet smoke)
+        run: uv run pytest -m smoke tests/ -v

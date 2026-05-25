@@ -370,6 +370,47 @@ The models used in this workflow are available at the following links:
 
 ![sdxl](./assets/sdxl_conversion.png?raw=true)
 
+## Quantization (opt-in)
+
+The `Core ML Converter` and `Core ML LCM Converter` nodes accept an
+optional `quantize_nbits` dropdown that runs k-means weight palettization
+(`coremltools.optimize.coreml.palettize_weights`) on the UNet before save.
+
+Values: `none` (default — no quantization, identical to unquantized
+behavior and filenames), `8`, `6`, `4`. The number is appended to the
+.mlpackage stem as `_q<bits>` so quantized and unquantized variants
+coexist on disk and in cache.
+
+### SD1.5 1×512×512 SPLIT_EINSUM tradeoffs (M2 Pro, ANE)
+
+Measured with 20 UNet forward passes at a fixed seed for the PSNR
+comparison:
+
+| nbits | size (MB) | size vs none | fwd median (ms) | PSNR vs `none` (dB) |
+|---|---:|---:|---:|---:|
+| none | 1641 | 1.000 | 197.1 | — |
+| 8    |  822 | 0.501 | 186.6 | 53.5 |
+| 6    |  617 | 0.376 | 183.0 | 40.2 |
+| 4    |  412 | 0.251 | 179.8 | 27.5 |
+
+PSNR here is computed on the raw `noise_pred` output of a single UNet
+forward at a fixed seed, not on the final decoded image — it isolates
+the quantization-induced drift from sampler / VAE noise. Final-image
+PSNR is comfortably higher (the sampler averages over 20 steps).
+
+### Recommended settings per chip / RAM
+
+- **8 GB RAM (M1 base, M2 base):** `nbits=4`. ~4× smaller model, still
+  loads, PSNR 27 dB is visually identical at SD1.5 sizes.
+- **16 GB RAM (M1/M2/M3 Pro):** `nbits=6` is the sweet spot — ~2.7×
+  smaller, PSNR 40 dB, no perceptible quality drop.
+- **32 GB+ RAM (Max / Ultra):** `nbits=8` if you want the safety
+  margin, `none` if you want bit-identical output for golden testing.
+
+The default stays `none` so existing workflows produce byte-for-byte
+identical output — the golden-image anchor (`tests/m2/test_golden_image.py`)
+verifies this on every Tier 2 run.
+
 ## Limitations
 
 - Core ML models are fixed in terms of their inputs and outputs.

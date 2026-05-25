@@ -258,6 +258,7 @@ def convert_unet(
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
+    quantize_nbits: str = "none",
 ):
     coreml_unet = get_unet(model_version, ref_pipe)
     ref_unet = ref_pipe.unet
@@ -305,6 +306,24 @@ def convert_unet(
     del traced_unet
     gc.collect()
 
+    if quantize_nbits != "none":
+        # Opt-in k-means weight palettization. The default path
+        # (quantize_nbits="none") leaves the traced UNet untouched.
+        from coremltools.optimize.coreml import (
+            OpPalettizerConfig,
+            OptimizationConfig,
+            palettize_weights,
+        )
+
+        nbits = int(quantize_nbits)
+        logger.info(f"Palettizing UNet weights to {nbits}-bit (kmeans)..")
+        t0 = time.time()
+        cfg = OptimizationConfig(
+            global_config=OpPalettizerConfig(mode="kmeans", nbits=nbits)
+        )
+        coreml_unet = palettize_weights(coreml_unet, config=cfg)
+        logger.info(f"Palettization took {time.time() - t0:.1f}s")
+
     coreml_unet.save(unet_out_path)
     logger.info(f"Saved unet into {unet_out_path}")
 
@@ -319,6 +338,7 @@ def convert(
     lora_weights: list[tuple[Union[str, os.PathLike], float]] = None,
     attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
     config_path: str = None,
+    quantize_nbits: str = "none",
 ):
     if os.path.exists(unet_out_path):
         logger.info(f"Found existing model at {unet_out_path}! Skipping..")
@@ -344,6 +364,7 @@ def convert(
         batch_size,
         sample_size,
         controlnet_support,
+        quantize_nbits=quantize_nbits,
     )
 
 
