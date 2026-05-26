@@ -115,10 +115,18 @@ jobs:
           done
           echo "comfy failed to start"; tail -100 /tmp/comfyui-ci.log; exit 1
 
+      - name: Purge cached Core ML UNets (force fresh conversion)
+        # The converter skips when a model of the same name already exists. That
+        # cache key is conversion *parameters* only, not the conversion code or
+        # toolchain — so a stale model would let a conversion regression pass.
+        # Clear it so every Tier 2 run exercises the full convert -> compile ->
+        # sample path end to end.
+        run: |
+          rm -rf "$COMFY_DIR"/models/unet/*.mlpackage "$COMFY_DIR"/models/unet/*.mlmodelc || true
+
       - name: Run Tier 2 (m2 marker)
-        # The golden-image workflow drives the Core ML Converter node, so the
-        # UNet is converted on demand on the first run and reused from the
-        # runner-local cache afterwards.
+        # Drives the Core ML Converter node, which converts the UNet from the
+        # checkpoint on every run (cache purged above).
         run: uv run --no-sync pytest -m m2 tests/ -v
 
       - name: Stop ComfyUI server
