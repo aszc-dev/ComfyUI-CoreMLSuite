@@ -307,8 +307,8 @@ can use any CLIP or VAE model as long as it's compatible with Stable Diffusion v
 
 1. **Loading text encoder (CLIP) and VAE models separately**
     - This workflow uses CLIP and VAE models available
-      [here](https://huggingface.co/runwayml/stable-diffusion-v1-5/blob/main/text_encoder/model.safetensors) and
-      [here](https://huggingface.co/runwayml/stable-diffusion-v1-5/blob/main/vae/diffusion_pytorch_model.safetensors).
+      [here](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/text_encoder/model.safetensors) and
+      [here](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/vae/diffusion_pytorch_model.safetensors).
       Once downloaded, place the models in the`models/clip` and `models/vae` directories respectively.
     - The Core ML UNet model is available
       [here](https://huggingface.co/coreml-community/coreml-stable-diffusion-v1-5_cn/blob/main/split_einsum/stable-diffusion-_v1-5_split-einsum_cn.zip).
@@ -316,7 +316,7 @@ can use any CLIP or VAE model as long as it's compatible with Stable Diffusion v
       ![coreml-unet+clip+vae](./assets/unet+sampler+clip+vae.png?raw=true)
 2. **Loading text encoder (CLIP) and VAE models from checkpoint file**
     - This workflow loads the CLIP and VAE models from the checkpoint file available
-      [here](https://huggingface.co/runwayml/stable-diffusion-v1-5/blob/main/v1-5-pruned-emaonly.safetensors).
+      [here](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors).
       Once downloaded, place the model in the`models/checkpoints` directory.
     - The Core ML UNet model is available
       [here](https://huggingface.co/coreml-community/coreml-stable-diffusion-v1-5_cn/blob/main/split_einsum/stable-diffusion-_v1-5_split-einsum_cn.zip).
