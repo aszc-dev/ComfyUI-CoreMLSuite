@@ -66,6 +66,5 @@ class COREML_CONVERT_LCM(COREML_NODE):
                 batch_size=batch_size,
                 controlnet_support=controlnet_support,
             )
-        target_path = lcm_converter.compile_model(out_path=out_path, out_name=out_name)
 
-        return (CoreMLModel(target_path, compute_unit),)
+        return (CoreMLModel(out_path, compute_unit),)

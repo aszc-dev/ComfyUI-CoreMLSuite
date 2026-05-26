@@ -167,7 +167,7 @@ class CoreMLLoader(COREML_NODE):
 
     @classmethod
     def coreml_filenames(cls):
-        extensions = (".mlmodelc", ".mlpackage")
+        extensions = (".mlpackage",)
         all_paths = folder_paths.get_filename_list_(cls.PACKAGE_DIRNAME)[1]
         coreml_paths = folder_paths.filter_files_extensions(all_paths, extensions)
 
@@ -337,11 +337,7 @@ class CoreMLConverter(COREML_NODE):
             config_path=config_path,
             quantize_nbits=quantize_nbits,
         )
-        unet_target_path = converter.compile_model(
-            out_path=unet_out_path, out_name=out_name, submodule_name="unet"
-        )
-
-        return (CoreMLModel(unet_target_path, compute_unit),)
+        return (CoreMLModel(unet_out_path, compute_unit),)
 
     @staticmethod
     def lora_path(lora_name):

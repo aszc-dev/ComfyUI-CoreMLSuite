@@ -1,5 +1,4 @@
 import os
-import shutil
 import logging
 import time
 import gc
@@ -115,23 +114,6 @@ def get_out_path(submodule_name, model_name):
     unet_path = get_folder_paths(submodule_name)[0]
     out_path = os.path.join(unet_path, fname)
     return out_path
-
-
-def compile_coreml_model(source_model_path, output_dir, final_name):
-    """Compiles Core ML models using the coremlcompiler utility from Xcode toolchain"""
-    target_path = os.path.join(output_dir, f"{final_name}.mlmodelc")
-    if os.path.exists(target_path):
-        logger.warning(f"Found existing compiled model at {target_path}! Skipping..")
-        return target_path
-
-    logger.info(f"Compiling {source_model_path}")
-    source_model_name = os.path.basename(os.path.splitext(source_model_path)[0])
-
-    os.system(f"xcrun coremlcompiler compile {source_model_path} {output_dir}")
-    compiled_output = os.path.join(output_dir, f"{source_model_name}.mlmodelc")
-    shutil.move(compiled_output, target_path)
-
-    return target_path
 
 
 def get_sample_input(batch_size, encoder_hidden_states_shape, sample_shape, scheduler):
@@ -262,17 +244,6 @@ def convert(
     logger.info(f"Saved unet into {out_path}")
 
 
-def compile_model(out_path, out_name):
-    from folder_paths import get_folder_paths
-
-    # Compile the model
-    target_path = compile_coreml_model(
-        out_path, get_folder_paths("unet")[0], f"{out_name}_unet"
-    )
-    logger.info(f"Compiled {out_path} to {target_path}")
-    return target_path
-
-
 if __name__ == "__main__":
     h = 512
     w = 512
@@ -286,4 +257,3 @@ if __name__ == "__main__":
     out_path = get_out_path("unet", f"{out_name}")
     if not os.path.exists(out_path):
         convert(out_path=out_path, sample_size=sample_size, batch_size=batch_size)
-    compile_model(out_path=out_path, out_name=out_name)
