@@ -21,6 +21,8 @@ for p in (str(COMFY_DIR), str(REPO_ROOT)):
 
 _TIER_BY_DIR = {
     "tests/unit": "unit",
+    "tests/m2": "m2",
+    "tests/integration": "m2",
     "tests/smoke": "smoke",
 }
 
@@ -29,6 +31,7 @@ _TIER_BY_DIR = {
 # files because they pull in coremltools which Linux CI won't have.
 _TIER_DIRS = {
     "unit": ("/tests/unit/",),
+    "m2": ("/tests/m2/", "/tests/integration/"),
     "smoke": ("/tests/smoke/",),
 }
 

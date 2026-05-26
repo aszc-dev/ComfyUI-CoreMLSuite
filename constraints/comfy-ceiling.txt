@@ -1,0 +1,18 @@
+# Toolchain ceiling for installing a floating-latest ComfyUI's requirements.txt
+# in the Tier 2 nightly canary (.github/workflows/tier2.yml, latest mode).
+#
+# ComfyUI's requirements.txt requests bare `torch`/`torchvision`/`torchaudio`
+# and `numpy>=1.25.0`, which would float past the versions coremltools 9 /
+# apple-ml-stable-diffusion have been validated against.
+# These constraints cap the resolution so the canary keeps testing the same
+# toolchain the suite actually ships.
+#
+# If upstream ComfyUI ever hard-requires something beyond these bounds, the
+# install FAILS — and that failure is the signal we want: it means the host
+# outgrew the pinned toolchain and coremltools / ml-stable-diffusion need a
+# deliberate bump, not a silent float.
+torch>=2.7,<2.8
+torchvision>=0.22,<0.23
+torchaudio>=2.7,<2.8
+numpy>=1.25,<2
+coremltools>=9,<10
