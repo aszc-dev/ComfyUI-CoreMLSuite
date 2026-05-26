@@ -15,10 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
+      # The self-hosted runner provides uv; no setup-uv action needed.
       - name: uv sync
         run: uv sync --no-install-project
 
