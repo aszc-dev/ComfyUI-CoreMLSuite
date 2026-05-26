@@ -225,8 +225,8 @@ class CoreMLConverter(COREML_NODE):
                         ModelVersion.SDXL.name,
                     ],
                 ),
-                "height": ("INT", {"default": 512, "min": 256, "max": 2048, "step": 8}),
-                "width": ("INT", {"default": 512, "min": 256, "max": 2048, "step": 8}),
+                "height": ("INT", {"default": 512, "min": 8, "step": 8}),
+                "width": ("INT", {"default": 512, "min": 8, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
                 "attention_implementation": (
                     list(ATTENTION_IMPLEMENTATIONS),
