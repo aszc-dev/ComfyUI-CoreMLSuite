@@ -4,7 +4,7 @@ description = "This extension contains a set of custom nodes for ComfyUI that al
 version = "2.0.2"
 license = "MIT"
 requires-python = ">=3.12,<3.13"
-packages = [{ include = "coreml_suite" }]
+packages = [{ include = "coreml_suite" }, { include = "coreml_diffusion" }]
 dependencies = [
     "torch>=2.7,<2.8",
     "coremltools>=9,<10",
