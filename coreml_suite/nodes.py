@@ -4,16 +4,10 @@ from coremltools import ComputeUnit
 
 import folder_paths
 from coreml_suite import COREML_NODE
-from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
 from coreml_suite.coreml_model import CoreMLModel
-from coreml_suite.core.naming import (
-    QUANT_NBITS_VALUES,
-    compose_out_name,
-    lora_names_from_params,
-)
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
-from coreml_suite.model_version import ModelVersion
+from coreml_diffusion import ModelVersion
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
@@ -22,6 +16,26 @@ from coreml_suite.models import (
     get_model_patcher,
     get_latent_image,
 )
+
+
+def _discover(fn_name, fallback):
+    """Populate a converter dropdown from coreml_diffusion's discovery API.
+
+    Fails soft: if the package is missing, too old to expose ``fn_name``, or
+    errors, the node still registers with the fallback list instead of vanishing
+    from the menu. Evaluated on every INPUT_TYPES call, so installing a newer
+    coreml_diffusion surfaces new conversion types with no Suite change.
+    """
+    try:
+        import coreml_diffusion
+
+        return getattr(coreml_diffusion, fn_name)()
+    except Exception as exc:  # missing/old package, import error, etc.
+        logger.warning(
+            f"coreml_diffusion.{fn_name} unavailable ({exc}); "
+            f"using fallback {fallback}"
+        )
+        return fallback
 
 
 class CoreMLSampler(COREML_NODE, KSampler):
@@ -219,17 +233,15 @@ class CoreMLConverter(COREML_NODE):
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
-                "model_version": (
-                    [
-                        ModelVersion.SD15.name,
-                        ModelVersion.SDXL.name,
-                    ],
-                ),
+                "model_version": (_discover("list_model_versions", ["SD15", "SDXL"]),),
                 "height": ("INT", {"default": 512, "min": 8, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 8, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
                 "attention_implementation": (
-                    list(ATTENTION_IMPLEMENTATIONS),
+                    _discover(
+                        "list_attention_impls",
+                        ["SPLIT_EINSUM", "SPLIT_EINSUM_V2", "ORIGINAL"],
+                    ),
                 ),
                 "compute_unit": (
                     [
@@ -247,7 +259,10 @@ class CoreMLConverter(COREML_NODE):
                 # omits any `required` input. When omitted it defaults to
                 # "none", identical to unquantized behavior and filename, so
                 # existing cached .mlpackages still resolve.
-                "quantize_nbits": (list(QUANT_NBITS_VALUES), {"default": "none"}),
+                "quantize_nbits": (
+                    _discover("list_quant_modes", ["none", "8", "6", "4"]),
+                    {"default": "none"},
+                ),
                 "lora_params": ("LORA_PARAMS",),
             },
         }
@@ -293,14 +308,16 @@ class CoreMLConverter(COREML_NODE):
         h = height
         w = width
         sample_size = (h // 8, w // 8)
-        out_name = compose_out_name(
+        import coreml_diffusion
+
+        out_name = coreml_diffusion.compose_out_name(
             ckpt_name=ckpt_name,
             batch_size=batch_size,
             width=w,
             height=h,
             controlnet_support=controlnet_support,
             attention_implementation=attention_implementation,
-            lora_names=lora_names_from_params(lora_params),
+            lora_names=coreml_diffusion.lora_names_from_params(lora_params),
             quantize_nbits=quantize_nbits,
         )
 
@@ -315,9 +332,10 @@ class CoreMLConverter(COREML_NODE):
             for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
 
-        from coreml_suite import converter
-
-        unet_out_path = converter.get_out_path("unet", f"{out_name}")
+        # Resolve the ComfyUI models/unet path here (a node concern); the package
+        # takes the output path as an injected argument.
+        unet_path = folder_paths.get_folder_paths("unet")[0]
+        unet_out_path = os.path.join(unet_path, f"{out_name}_unet.mlpackage")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
         config_filename = ckpt_name.split(".")[0] + ".yaml"
@@ -325,10 +343,10 @@ class CoreMLConverter(COREML_NODE):
         if config_path:
             logger.info(f"Using config file {config_path}")
 
-        converter.convert(
-            ckpt_path=ckpt_path,
-            model_version=model_version,
-            unet_out_path=unet_out_path,
+        coreml_diffusion.convert(
+            ckpt_path,
+            model_version,
+            unet_out_path,
             sample_size=sample_size,
             batch_size=batch_size,
             controlnet_support=controlnet_support,

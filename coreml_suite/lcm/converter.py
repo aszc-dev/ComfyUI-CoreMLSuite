@@ -1,19 +1,36 @@
-import os
-import logging
-import time
-import gc
+"""LCM-specific conversion orchestration (comfy-side).
 
-import numpy as np
+E2 deduped the generic helpers (input building, Core ML export, residual-shape
+calc) into ``coreml_diffusion.convert`` — this file now imports them instead of
+carrying near-identical copies. What stays here is the genuinely LCM-specific
+path: the hardcoded ``SimianLuo/LCM_Dreamshaper_v7`` download and the scheduler
+that supplies the trace timestep. Consolidating that into the unified
+``coreml_diffusion.convert(model_version=LCM, ...)`` path is a behavior change
+deferred to E-LCM (it needs its own golden anchor).
+
+``get_scheduler`` keeps using ``comfy.model_management`` because it runs on the
+comfy side; the conversion package itself stays comfy-free.
+"""
+import gc
+import logging
+import os
+
 import torch
 from diffusers import UNet2DConditionModel, LCMScheduler
 from diffusers.loaders import LoraLoaderMixin
 
-from coreml_suite.conversion.attention import apply_attention_implementation
-from coreml_suite.conversion.shapes import conv2d_output_shape
-from coreml_suite.conversion.unet import CoreMLUNetWrapper
-from coreml_suite.model_version import ModelVersion
-
-import coremltools as ct
+from coreml_diffusion.conversion.attention import apply_attention_implementation
+from coreml_diffusion.conversion.unet import CoreMLUNetWrapper
+from coreml_diffusion.convert import (
+    add_cnet_support,
+    convert_to_coreml,
+    get_coreml_inputs,
+    get_encoder_hidden_states_shape,
+    get_inputs_spec,
+    get_sample_input,
+    lcm_inputs,
+)
+from coreml_diffusion import ModelVersion
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -21,7 +38,6 @@ logger.setLevel(logging.DEBUG)
 
 MODEL_VERSION = "SimianLuo/LCM_Dreamshaper_v7"
 MODEL_NAME = MODEL_VERSION.split("/")[-1] + "_4k"
-TEXT_TOKEN_SEQUENCE_LENGTH = 77
 
 
 def get_unets():
@@ -40,71 +56,12 @@ def get_unets():
     return cml_unet, ref_unet
 
 
-def get_encoder_hidden_states_shape(unet_config, batch_size):
-    encoder_hidden_states_shape = (
-        batch_size,
-        TEXT_TOKEN_SEQUENCE_LENGTH,
-        unet_config.cross_attention_dim,
-    )
-
-    return encoder_hidden_states_shape
-
-
 def get_scheduler():
     from comfy.model_management import get_torch_device
 
     scheduler = LCMScheduler.from_pretrained(MODEL_VERSION, subfolder="scheduler")
     scheduler.set_timesteps(50, get_torch_device(), 50)
     return scheduler
-
-
-def get_coreml_inputs(sample_inputs):
-    coreml_sample_unet_inputs = {
-        k: v.numpy().astype(np.float16) for k, v in sample_inputs.items()
-    }
-    return [
-        ct.TensorType(
-            name=k,
-            shape=v.shape,
-            dtype=v.numpy().dtype if isinstance(v, torch.Tensor) else v.dtype,
-        )
-        for k, v in coreml_sample_unet_inputs.items()
-    ]
-
-
-def load_coreml_model(out_path):
-    logger.info(f"Loading model from {out_path}")
-
-    start = time.time()
-    coreml_model = ct.models.MLModel(out_path)
-    logger.info(f"Loading {out_path} took {time.time() - start:.1f} seconds")
-
-    return coreml_model
-
-
-def convert_to_coreml(
-    submodule_name, torchscript_module, sample_inputs, output_names, out_path
-):
-    if os.path.exists(out_path):
-        logger.info(f"Skipping export because {out_path} already exists")
-        coreml_model = load_coreml_model(out_path)
-    else:
-        logger.info(f"Converting {submodule_name} to CoreML..")
-        coreml_model = ct.convert(
-            torchscript_module,
-            convert_to="mlprogram",
-            minimum_deployment_target=ct.target.macOS13,
-            inputs=sample_inputs,
-            outputs=[
-                ct.TensorType(name=name, dtype=np.float32) for name in output_names
-            ],
-            skip_model_load=True,
-        )
-
-        del torchscript_module
-        gc.collect()
-
-    return coreml_model
 
 
 def get_out_path(submodule_name, model_name):
@@ -114,77 +71,6 @@ def get_out_path(submodule_name, model_name):
     unet_path = get_folder_paths(submodule_name)[0]
     out_path = os.path.join(unet_path, fname)
     return out_path
-
-
-def get_sample_input(batch_size, encoder_hidden_states_shape, sample_shape, scheduler):
-    sample_unet_inputs = dict(
-        [
-            ("sample", torch.rand(*sample_shape)),
-            (
-                "timestep",
-                torch.tensor([scheduler.timesteps[0].item()] * batch_size).to(
-                    torch.float32
-                ),
-            ),
-            ("encoder_hidden_states", torch.rand(*encoder_hidden_states_shape)),
-            ("timestep_cond", torch.randn(batch_size, 256).to(torch.float32)),
-        ]
-    )
-    return sample_unet_inputs
-
-
-def get_unet_inputs_spec(sample_unet_inputs):
-    sample_unet_inputs_spec = {
-        k: (v.shape, v.dtype) for k, v in sample_unet_inputs.items()
-    }
-    return sample_unet_inputs_spec
-
-
-def add_cnet_support(sample_shape, reference_unet):
-    additional_residuals_shapes = []
-
-    batch_size = sample_shape[0]
-    h, w = sample_shape[2:]
-
-    # conv_in
-    out_h, out_w = conv2d_output_shape(
-        h,
-        w,
-        reference_unet.conv_in,
-    )
-    additional_residuals_shapes.append(
-        (batch_size, reference_unet.conv_in.out_channels, out_h, out_w)
-    )
-
-    # down_blocks
-    for down_block in reference_unet.down_blocks:
-        additional_residuals_shapes += [
-            (batch_size, resnet.out_channels, out_h, out_w)
-            for resnet in down_block.resnets
-        ]
-        if hasattr(down_block, "downsamplers") and down_block.downsamplers is not None:
-            for downsampler in down_block.downsamplers:
-                out_h, out_w = conv2d_output_shape(out_h, out_w, downsampler.conv)
-            additional_residuals_shapes.append(
-                (
-                    batch_size,
-                    down_block.downsamplers[-1].conv.out_channels,
-                    out_h,
-                    out_w,
-                )
-            )
-
-    # mid_block
-    additional_residuals_shapes.append(
-        (batch_size, reference_unet.mid_block.resnets[-1].out_channels, out_h, out_w)
-    )
-
-    additional_inputs = {}
-    for i, shape in enumerate(additional_residuals_shapes):
-        sample_residual_input = torch.rand(*shape)
-        additional_inputs[f"additional_residual_{i}"] = sample_residual_input
-
-    return additional_inputs
 
 
 def convert(
@@ -209,20 +95,19 @@ def convert(
         sample_size[1],  # W
     )
 
-    encoder_hidden_states_shape = get_encoder_hidden_states_shape(
-        ref_unet.config, batch_size
-    )
+    encoder_hidden_states_shape = get_encoder_hidden_states_shape(ref_unet, batch_size)
 
     scheduler = get_scheduler()
 
     sample_inputs = get_sample_input(
-        batch_size, encoder_hidden_states_shape, sample_shape, scheduler
+        batch_size, encoder_hidden_states_shape, sample_shape, scheduler=scheduler
     )
+    sample_inputs |= lcm_inputs(sample_inputs)
 
     if controlnet_support:
         sample_inputs |= add_cnet_support(sample_shape, ref_unet)
 
-    sample_inputs_spec = get_unet_inputs_spec(sample_inputs)
+    sample_inputs_spec = get_inputs_spec(sample_inputs)
 
     logger.info(f"Sample UNet inputs spec: {sample_inputs_spec}")
     logger.info("JIT tracing..")
