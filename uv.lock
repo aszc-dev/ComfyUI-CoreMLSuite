@@ -209,13 +209,11 @@ name = "comfyui-coremlsuite"
 version = "2.0.2"
 source = { virtual = "." }
 dependencies = [
+    { name = "coreml-diffusion" },
     { name = "coremltools" },
     { name = "diffusers" },
     { name = "numpy" },
-    { name = "omegaconf" },
-    { name = "peft" },
     { name = "torch" },
-    { name = "transformers" },
 ]
 
 [package.dev-dependencies]
@@ -242,13 +240,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "coreml-diffusion", editable = "../../../coreml-diffusion" },
     { name = "coremltools", specifier = ">=9,<10" },
     { name = "diffusers", specifier = ">=0.30" },
     { name = "numpy", specifier = ">=2,<3" },
-    { name = "omegaconf", specifier = ">=2.3" },
-    { name = "peft", specifier = ">=0.13" },
     { name = "torch", specifier = ">=2.7,<2.8" },
-    { name = "transformers", specifier = ">=4.44" },
 ]
 
 [package.metadata.requires-dev]
@@ -281,6 +277,34 @@ sdist = { url = "https://files.pythonhosted.org/packages/fc/55/6571d283fb9083d7c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/25/26c0d75006470d32bfc9eb39ac61a22600bfa509d672405ff3fe1561e2a8/comfyui_frontend_package-1.14.6-py3-none-any.whl", hash = "sha256:1044e30ff3c025dfb63f4c68ecd808a77050c3a5cc3c1f3e6421ea39800bbf40", size = 34873501, upload-time = "2025-03-27T15:50:30.726Z" },
 ]
+
+[[package]]
+name = "coreml-diffusion"
+version = "0.1.0"
+source = { editable = "../../../coreml-diffusion" }
+dependencies = [
+    { name = "coremltools" },
+    { name = "diffusers" },
+    { name = "numpy" },
+    { name = "omegaconf" },
+    { name = "peft" },
+    { name = "torch" },
+    { name = "transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "coremltools", specifier = ">=9,<10" },
+    { name = "diffusers", specifier = ">=0.30" },
+    { name = "numpy", specifier = ">=2,<3" },
+    { name = "omegaconf", specifier = ">=2.3" },
+    { name = "peft", specifier = ">=0.13" },
+    { name = "torch", specifier = ">=2.7,<2.8" },
+    { name = "transformers", specifier = ">=4.44" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "coremltools"

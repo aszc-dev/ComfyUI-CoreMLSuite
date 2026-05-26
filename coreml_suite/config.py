@@ -4,7 +4,7 @@ from comfy import supported_models_base
 from comfy import latent_formats
 from comfy.model_detection import convert_config
 
-from coreml_suite.model_version import ModelVersion
+from coreml_diffusion import ModelVersion
 
 
 config_map = {

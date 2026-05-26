@@ -30,7 +30,7 @@ from coreml_diffusion.convert import (
     get_sample_input,
     lcm_inputs,
 )
-from coreml_suite.model_version import ModelVersion
+from coreml_diffusion import ModelVersion
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)

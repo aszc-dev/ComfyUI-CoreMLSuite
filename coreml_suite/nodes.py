@@ -7,7 +7,7 @@ from coreml_suite import COREML_NODE
 from coreml_suite.coreml_model import CoreMLModel
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
-from coreml_suite.model_version import ModelVersion
+from coreml_diffusion import ModelVersion
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
