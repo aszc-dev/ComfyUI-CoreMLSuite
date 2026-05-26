@@ -23,7 +23,11 @@ from enum import Enum
 
 from coreml_suite.model_version import ModelVersion
 from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
-from coreml_diffusion.naming import QUANT_NBITS_VALUES, compose_out_name
+from coreml_diffusion.naming import (
+    QUANT_NBITS_VALUES,
+    compose_out_name,
+    lora_names_from_params,
+)
 
 __all__ = [
     "ModelVersion",
@@ -33,6 +37,7 @@ __all__ = [
     "list_quant_modes",
     "CONTRACT_VERSION",
     "compose_out_name",
+    "lora_names_from_params",
     "convert",
 ]
 

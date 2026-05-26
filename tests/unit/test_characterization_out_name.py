@@ -1,7 +1,7 @@
 """Characterization tests for the .mlpackage filename composition.
 
 The filename composition is the pure
-coreml_suite.core.naming.compose_out_name function. CoreMLConverter.convert
+coreml_diffusion.naming.compose_out_name function. CoreMLConverter.convert
 calls it; testing the pure function avoids monkey-patching heavy converter
 internals just to capture the string.
 """
