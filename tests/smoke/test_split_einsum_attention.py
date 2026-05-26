@@ -4,7 +4,7 @@ import pytest
 import torch
 from diffusers.models.attention_processor import Attention, AttnProcessor
 
-from coreml_suite.conversion.attention import (
+from coreml_diffusion.conversion.attention import (
     SplitEinsumAttnProcessor,
     SplitEinsumV2AttnProcessor,
 )

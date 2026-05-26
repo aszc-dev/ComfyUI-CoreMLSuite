@@ -7,7 +7,7 @@ internals just to capture the string.
 """
 import pytest
 
-from coreml_suite.core.naming import compose_out_name, lora_names_from_params
+from coreml_diffusion.naming import compose_out_name, lora_names_from_params
 
 
 # ---------- attention suffixes ----------------------------------------------

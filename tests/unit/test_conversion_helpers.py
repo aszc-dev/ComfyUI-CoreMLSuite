@@ -2,15 +2,15 @@ from types import SimpleNamespace
 
 import torch
 
-from coreml_suite.conversion.attention import (
+from coreml_diffusion.conversion.attention import (
     SplitEinsumAttnProcessor,
     SplitEinsumV2AttnProcessor,
     apply_attention_implementation,
     split_einsum,
     split_einsum_v2,
 )
-from coreml_suite.conversion.shapes import conv2d_output_shape
-from coreml_suite.conversion.unet import CoreMLUNetWrapper
+from coreml_diffusion.conversion.shapes import conv2d_output_shape
+from coreml_diffusion.conversion.unet import CoreMLUNetWrapper
 
 
 class RecordingUNet(torch.nn.Module):

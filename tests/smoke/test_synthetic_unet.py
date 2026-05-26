@@ -22,7 +22,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from coreml_suite.conversion.unet import CoreMLUNetWrapper
+from coreml_diffusion.conversion.unet import CoreMLUNetWrapper
 
 
 pytestmark = pytest.mark.skipif(

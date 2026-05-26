@@ -11,7 +11,7 @@ this file is the contract anchor, so it must fail loudly if a source list drifts
 """
 import coreml_diffusion
 from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
-from coreml_suite.core.naming import QUANT_NBITS_VALUES
+from coreml_diffusion.naming import QUANT_NBITS_VALUES
 from coreml_suite.model_version import ModelVersion
 
 

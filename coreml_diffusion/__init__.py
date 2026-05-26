@@ -23,7 +23,7 @@ from enum import Enum
 
 from coreml_suite.model_version import ModelVersion
 from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
-from coreml_suite.core.naming import QUANT_NBITS_VALUES
+from coreml_diffusion.naming import QUANT_NBITS_VALUES, compose_out_name
 
 __all__ = [
     "ModelVersion",
@@ -32,6 +32,8 @@ __all__ = [
     "list_attention_impls",
     "list_quant_modes",
     "CONTRACT_VERSION",
+    "compose_out_name",
+    "convert",
 ]
 
 
@@ -84,3 +86,17 @@ def list_quant_modes() -> list[str]:
 # Discovery-contract version. Bump per the additive-only rules in this module's
 # docstring and CONVERTER_EXTRACTION_SPEC.md "Interface contract".
 CONTRACT_VERSION = "1.0"
+
+
+def __getattr__(name):
+    """Lazily expose the heavy conversion entrypoint.
+
+    ``convert`` pulls coremltools/diffusers, so importing it eagerly would drag
+    the Mac/heavy stack into every ``import coreml_diffusion`` and break the
+    Tier-0 (Linux, framework-free) lane. Resolve it only on first access.
+    """
+    if name == "convert":
+        from coreml_diffusion.convert import convert as _convert
+
+        return _convert
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
