@@ -13,10 +13,9 @@ class CoreMLModel:
     ``expected_inputs`` and callable prediction.
     """
 
-    def __init__(self, model_path, compute_unit, sources=None):
+    def __init__(self, model_path, compute_unit):
         self.model_path = model_path
         self.compute_unit = self._compute_unit(compute_unit)
-        self.sources = sources
 
         logger.info(f"Loading {model_path} to {self.compute_unit.name}")
         start = time.time()

@@ -20,7 +20,7 @@ def expected_inputs():
         "sample": {"shape": (2, 4, 64, 64)},
         "timestep": {"shape": (2,)},
         "timestep_cond": {"shape": (2, 256)},
-        "encoder_hidden_states": {"shape": (2, 768, 1, 77)},
+        "encoder_hidden_states": {"shape": (2, 77, 768)},
         "additional_residual_0": {"shape": (2, 320, 64, 64)},
         "additional_residual_1": {"shape": (2, 640, 32, 32)},
     }

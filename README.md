@@ -8,8 +8,8 @@ These models are designed to leverage the Apple Neural Engine (ANE) on Apple Sil
 thereby enhancing your workflows and improving performance.
 
 If you're not sure how to obtain these models, you can download them
-[here](https://huggingface.co/coreml-community) or convert your own models using
-[coremltools](https://github.com/apple/ml-stable-diffusion).
+[here](https://huggingface.co/coreml-community) or convert your own checkpoints
+directly with the conversion nodes in this suite (see [How to use](#how-to-use)).
 
 In simple terms, think of Core ML models as a tool that can help your ComfyUI work faster and more efficiently.
 For instance, during my tests on an M2 Pro 32GB machine,
@@ -80,6 +80,29 @@ These custom nodes come with a host of features, including:
 
 > [!NOTE]  
 > This repository will continue to be updated with more nodes and features over time.
+
+## Conversion & Acknowledgements
+
+The Core ML conversion pipeline in this repository began as an adaptation of
+Apple's [ml-stable-diffusion](https://github.com/apple/ml-stable-diffusion),
+which pioneered running Stable Diffusion on the Apple Neural Engine. The
+implementation has since diverged and no longer depends on that package:
+
+- UNet conversion runs natively on `diffusers`' `UNet2DConditionModel`.
+- The ANE-friendly attention path (`SPLIT_EINSUM`, `SPLIT_EINSUM_V2`) is
+  reimplemented as standalone `diffusers` attention processors.
+- The toolchain tracks current ComfyUI (NumPy 2, Torch 2.7, coremltools 9,
+  Python 3.12).
+
+The goal is to keep iterating on these methods independently and to explore
+support beyond SD1.5.
+
+> [!IMPORTANT]
+> **Breaking change in 2.0.0.** The converted Core ML UNet now takes
+> `encoder_hidden_states` in the native `diffusers` layout
+> `(batch, tokens, hidden)` instead of the previous
+> `(batch, hidden, 1, tokens)`. Core ML models converted with earlier versions
+> are not compatible with 2.0.0 and must be re-converted.
 
 ## Installation
 
@@ -415,8 +438,8 @@ identical output.
 - Core ML models are fixed in terms of their inputs and outputs.
   This means you'll need to use latent images of the same size as the input of the model (512x512 is the default for
   SD1.5).
-  However, you can convert the model to a different input size using tools available
-  in the [apple/ml-stable-diffusion](https://github.com/apple/ml-stable-diffusion) repository.
+  However, you can re-convert the model to a different input size using the
+  conversion nodes in this suite (set the desired width and height).
 - SD2.1 models are not supported.
 
 [^1]:

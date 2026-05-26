@@ -23,13 +23,6 @@ from coreml_suite.models import (
     get_latent_image,
 )
 
-LEGACY_CONVERTER_MODULES = {
-    "diffusers",
-    "omegaconf",
-    "peft",
-    "transformers",
-}
-
 
 class CoreMLSampler(COREML_NODE, KSampler):
     @classmethod
@@ -185,9 +178,7 @@ class CoreMLLoader(COREML_NODE):
 
         coreml_path = self.coreml_filenames()[coreml_name]
 
-        sources = "compiled" if coreml_name.endswith(".mlmodelc") else "packages"
-
-        return (CoreMLModel(coreml_path, compute_unit, sources),)
+        return (CoreMLModel(coreml_path, compute_unit),)
 
 
 class CoreMLLoaderUNet(CoreMLLoader):
@@ -324,17 +315,7 @@ class CoreMLConverter(COREML_NODE):
             for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
 
-        try:
-            from coreml_suite import converter
-        except ModuleNotFoundError as exc:
-            if exc.name in LEGACY_CONVERTER_MODULES:
-                raise RuntimeError(
-                    "The legacy checkpoint converter requires "
-                    "the conversion dependency set. These dependencies are part "
-                    "of the default installation; reinstall the package if this "
-                    "message appears."
-                ) from exc
-            raise
+        from coreml_suite import converter
 
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
@@ -360,7 +341,7 @@ class CoreMLConverter(COREML_NODE):
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"
         )
 
-        return (CoreMLModel(unet_target_path, compute_unit, "compiled"),)
+        return (CoreMLModel(unet_target_path, compute_unit),)
 
     @staticmethod
     def lora_path(lora_name):

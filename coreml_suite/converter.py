@@ -32,9 +32,8 @@ def get_unet(model_version: ModelVersion, ref_unet, attention_implementation):
 def get_encoder_hidden_states_shape(ref_unet, batch_size):
     encoder_hidden_states_shape = (
         batch_size,
-        ref_unet.config.cross_attention_dim,
-        1,
         TEXT_TOKEN_SEQUENCE_LENGTH,
+        ref_unet.config.cross_attention_dim,
     )
 
     return encoder_hidden_states_shape

@@ -5,11 +5,6 @@ from coremltools import ComputeUnit
 from coreml_suite import COREML_NODE
 from coreml_suite.coreml_model import CoreMLModel
 
-LEGACY_CONVERTER_MODULES = {
-    "diffusers",
-    "transformers",
-}
-
 
 class COREML_CONVERT_LCM(COREML_NODE):
     """Converts a LCM model to Core ML."""
@@ -52,17 +47,7 @@ class COREML_CONVERT_LCM(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
-        try:
-            from coreml_suite.lcm import converter as lcm_converter
-        except ModuleNotFoundError as exc:
-            if exc.name in LEGACY_CONVERTER_MODULES:
-                raise RuntimeError(
-                    "The legacy LCM converter requires "
-                    "the conversion dependency set. These dependencies are part "
-                    "of the default installation; reinstall the package if this "
-                    "message appears."
-                ) from exc
-            raise
+        from coreml_suite.lcm import converter as lcm_converter
 
         h = height
         w = width
@@ -83,4 +68,4 @@ class COREML_CONVERT_LCM(COREML_NODE):
             )
         target_path = lcm_converter.compile_model(out_path=out_path, out_name=out_name)
 
-        return (CoreMLModel(target_path, compute_unit, "compiled"),)
+        return (CoreMLModel(target_path, compute_unit),)

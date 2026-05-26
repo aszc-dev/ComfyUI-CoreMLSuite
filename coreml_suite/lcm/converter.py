@@ -44,9 +44,8 @@ def get_unets():
 def get_encoder_hidden_states_shape(unet_config, batch_size):
     encoder_hidden_states_shape = (
         batch_size,
-        unet_config.cross_attention_dim,
-        1,
         TEXT_TOKEN_SEQUENCE_LENGTH,
+        unet_config.cross_attention_dim,
     )
 
     return encoder_hidden_states_shape

@@ -35,7 +35,7 @@ pytestmark = pytest.mark.skipif(
 # coremltools, small enough that conversion finishes in seconds on CPU.
 SAMPLE_SHAPE = (1, 4, 8, 8)
 TIMESTEP_SHAPE = (1,)
-ENCODER_SHAPE = (1, 64, 1, 4)  # matches SD's transposed encoder_hidden_states layout
+ENCODER_SHAPE = (1, 4, 64)  # native diffusers encoder_hidden_states (batch, tokens, hidden)
 OUT_NAME = "noise_pred"
 
 
@@ -44,7 +44,7 @@ class TinyUNet(nn.Module):
 
     Not a real diffusion model. Just enough op variety to exercise the
     PyTorch -> MIL frontend in coremltools and confirm we can still wire
-    the inputs/outputs the way ml-stable-diffusion expects.
+    the inputs/outputs the way CoreMLSuite's runtime expects.
     """
 
     def __init__(self):
@@ -113,7 +113,7 @@ def tiny_mlpackage(tmp_path_factory):
 def test_coremltools_convert_round_trips_via_coreml_model(tiny_mlpackage):
     from coreml_suite.coreml_model import CoreMLModel
 
-    model = CoreMLModel(str(tiny_mlpackage), "CPU_ONLY", "packages")
+    model = CoreMLModel(str(tiny_mlpackage), "CPU_ONLY")
 
     # expected_inputs is the contract our wrappers depend on. Lock the shape
     # of the dict + a sample entry.

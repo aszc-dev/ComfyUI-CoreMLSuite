@@ -33,11 +33,6 @@ class CoreMLUNetWrapper(torch.nn.Module):
             down_residuals = tuple(additional_residuals[:-1])
             mid_residual = additional_residuals[-1]
 
-        # Runtime Core ML inputs keep the historical apple/ml-stable-diffusion
-        # shape: (batch, hidden, 1, tokens). diffusers expects (batch, tokens,
-        # hidden).
-        encoder_hidden_states = encoder_hidden_states.squeeze(2).transpose(1, 2)
-
         outputs = self.unet(
             sample,
             timestep,

@@ -25,7 +25,7 @@ def _deterministic_seed():
 SD15_EXPECTED = {
     "sample": {"shape": (2, 4, 64, 64)},
     "timestep": {"shape": (2,)},
-    "encoder_hidden_states": {"shape": (2, 768, 1, 77)},
+    "encoder_hidden_states": {"shape": (2, 77, 768)},
 }
 
 SD15_WITH_CN = {
@@ -42,7 +42,7 @@ LCM_EXPECTED = {
 SDXL_BASE_EXPECTED = {
     "sample": {"shape": (2, 4, 128, 128)},
     "timestep": {"shape": (2,)},
-    "encoder_hidden_states": {"shape": (2, 2048, 1, 77)},
+    "encoder_hidden_states": {"shape": (2, 77, 2048)},
     "time_ids": {"shape": (2, 6)},
     "text_embeds": {"shape": (2, 1280)},
 }
@@ -50,7 +50,7 @@ SDXL_BASE_EXPECTED = {
 SDXL_REFINER_EXPECTED = {
     "sample": {"shape": (2, 4, 128, 128)},
     "timestep": {"shape": (2,)},
-    "encoder_hidden_states": {"shape": (2, 1280, 1, 77)},
+    "encoder_hidden_states": {"shape": (2, 77, 1280)},
     "time_ids": {"shape": (2, 5)},
     "text_embeds": {"shape": (2, 1280)},
 }
@@ -93,8 +93,8 @@ def test_coreml_kwargs_sd15_shapes_and_fp16():
     assert set(out.keys()) == {"sample", "encoder_hidden_states", "timestep"}
     assert out["sample"].shape == (1, 4, 64, 64)
     assert out["sample"].dtype == np.float16
-    # encoder_hidden_states is transposed (b, seq, dim) -> (b, dim, 1, seq).
-    assert out["encoder_hidden_states"].shape == (1, 768, 1, 77)
+    # encoder_hidden_states keeps Comfy's native (b, seq, dim) layout.
+    assert out["encoder_hidden_states"].shape == (1, 77, 768)
     assert out["encoder_hidden_states"].dtype == np.float16
     assert out["timestep"].shape == (1,)
     assert out["timestep"].dtype == np.float16

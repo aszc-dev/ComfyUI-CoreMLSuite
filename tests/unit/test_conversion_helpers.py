@@ -56,18 +56,18 @@ def test_conv2d_output_shape_matches_torch_conv2d_contract():
     assert conv2d_output_shape(17, 19, conv) == (9, 5)
 
 
-def test_unet_wrapper_adapts_coreml_context_layout_for_sd15():
+def test_unet_wrapper_passes_context_through_for_sd15():
     unet = RecordingUNet()
     wrapper = CoreMLUNetWrapper(unet, SimpleNamespace(name="SD15"))
 
     sample = torch.randn(2, 4, 8, 8)
     timestep = torch.randn(2)
-    context = torch.randn(2, 768, 1, 77)
+    context = torch.randn(2, 77, 768)
 
     out = wrapper(sample, timestep, context)
 
     assert torch.equal(out, sample + 1)
-    assert unet.call["encoder_hidden_states"].shape == (2, 77, 768)
+    assert unet.call["encoder_hidden_states"] is context
     assert unet.call["return_dict"] is False
 
 
@@ -77,7 +77,7 @@ def test_unet_wrapper_routes_lcm_sdxl_and_controlnet_inputs():
 
     sample = torch.randn(1, 4, 8, 8)
     timestep = torch.randn(1)
-    context = torch.randn(1, 768, 1, 77)
+    context = torch.randn(1, 77, 768)
     timestep_cond = torch.randn(1, 256)
     down_residual = torch.randn(1, 320, 8, 8)
     mid_residual = torch.randn(1, 1280, 1, 1)
@@ -96,7 +96,7 @@ def test_unet_wrapper_routes_sdxl_added_conditioning():
 
     sample = torch.randn(1, 4, 8, 8)
     timestep = torch.randn(1)
-    context = torch.randn(1, 2048, 1, 77)
+    context = torch.randn(1, 77, 2048)
     time_ids = torch.randn(1, 6)
     text_embeds = torch.randn(1, 1280)
 
