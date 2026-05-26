@@ -1,13 +1,11 @@
 import os
 
 from coremltools import ComputeUnit
-from python_coreml_stable_diffusion.coreml_model import CoreMLModel
-from python_coreml_stable_diffusion.unet import AttentionImplementations
 
 import folder_paths
 from coreml_suite import COREML_NODE
-from coreml_suite import converter
-from coreml_suite.config import ModelVersion
+from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
+from coreml_suite.coreml_model import CoreMLModel
 from coreml_suite.core.naming import (
     QUANT_NBITS_VALUES,
     compose_out_name,
@@ -15,6 +13,7 @@ from coreml_suite.core.naming import (
 )
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
+from coreml_suite.model_version import ModelVersion
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
@@ -179,9 +178,7 @@ class CoreMLLoader(COREML_NODE):
 
         coreml_path = self.coreml_filenames()[coreml_name]
 
-        sources = "compiled" if coreml_name.endswith(".mlmodelc") else "packages"
-
-        return (CoreMLModel(coreml_path, compute_unit, sources),)
+        return (CoreMLModel(coreml_path, compute_unit),)
 
 
 class CoreMLLoaderUNet(CoreMLLoader):
@@ -232,11 +229,7 @@ class CoreMLConverter(COREML_NODE):
                 "width": ("INT", {"default": 512, "min": 256, "max": 2048, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
                 "attention_implementation": (
-                    [
-                        AttentionImplementations.SPLIT_EINSUM.name,
-                        AttentionImplementations.SPLIT_EINSUM_V2.name,
-                        AttentionImplementations.ORIGINAL.name,
-                    ],
+                    list(ATTENTION_IMPLEMENTATIONS),
                 ),
                 "compute_unit": (
                     [
@@ -322,6 +315,8 @@ class CoreMLConverter(COREML_NODE):
             for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
 
+        from coreml_suite import converter
+
         unet_out_path = converter.get_out_path("unet", f"{out_name}")
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
@@ -346,7 +341,7 @@ class CoreMLConverter(COREML_NODE):
             out_path=unet_out_path, out_name=out_name, submodule_name="unet"
         )
 
-        return (CoreMLModel(unet_target_path, compute_unit, "compiled"),)
+        return (CoreMLModel(unet_target_path, compute_unit),)
 
     @staticmethod
     def lora_path(lora_name):

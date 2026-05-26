@@ -30,7 +30,7 @@ SD15_RESIDUAL_SPEC = {
 }
 NON_RESIDUAL_SPEC = {
     "sample": {"shape": (2, 4, 64, 64)},
-    "encoder_hidden_states": {"shape": (2, 768, 1, 77)},
+    "encoder_hidden_states": {"shape": (2, 77, 768)},
 }
 
 

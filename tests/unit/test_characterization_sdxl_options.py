@@ -2,8 +2,8 @@
 
 The SDXL time_ids / text_embeds math lives in
 coreml_suite.core.sdxl as pure builders. The framework adapter
-add_sdxl_model_options (in models.py) is exercised separately by the m2
-golden image test; here we just lock the pure math.
+add_sdxl_model_options lives in models.py; here we just lock the pure
+math.
 """
 import inspect
 

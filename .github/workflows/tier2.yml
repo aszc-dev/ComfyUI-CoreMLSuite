@@ -30,7 +30,7 @@ jobs:
       # Hybrid ComfyUI strategy:
       #   - schedule (nightly)  -> latest origin/master + ComfyUI's own
       #     requirements.txt (constrained). Canary for upstream API breakage.
-      #   - PR label / dispatch -> the pinned requires-comfyui SHA + the frozen
+      #   - PR label / dispatch -> the requires-comfyui version tag + the frozen
       #     `comfy` uv group. Reproducible merge gate, immune to overnight drift.
       - name: Resolve ComfyUI ref + mode
         run: |
@@ -38,10 +38,12 @@ jobs:
             echo "COMFY_MODE=latest" >> "$GITHUB_ENV"
             echo "COMFY_REF=master"  >> "$GITHUB_ENV"
           else
-            PIN="$(sed -nE 's/^requires-comfyui *= *"==?([0-9a-f]+)".*/\1/p' pyproject.toml)"
-            if [ -z "$PIN" ]; then echo "could not parse requires-comfyui from pyproject.toml"; exit 1; fi
-            echo "COMFY_MODE=pinned" >> "$GITHUB_ENV"
-            echo "COMFY_REF=$PIN"    >> "$GITHUB_ENV"
+            # requires-comfyui is a semver constraint (e.g. ">=0.3.27"); pin the
+            # gate to the matching ComfyUI release tag (vX.Y.Z).
+            VERSION="$(sed -nE 's/^requires-comfyui *= *"[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pyproject.toml)"
+            if [ -z "$VERSION" ]; then echo "could not parse requires-comfyui from pyproject.toml"; exit 1; fi
+            echo "COMFY_MODE=pinned"      >> "$GITHUB_ENV"
+            echo "COMFY_REF=v$VERSION"    >> "$GITHUB_ENV"
           fi
 
       - name: Set up ComfyUI checkout
@@ -113,10 +115,18 @@ jobs:
           done
           echo "comfy failed to start"; tail -100 /tmp/comfyui-ci.log; exit 1
 
+      - name: Purge cached Core ML UNets (force fresh conversion)
+        # The converter skips when a model of the same name already exists. That
+        # cache key is conversion *parameters* only, not the conversion code or
+        # toolchain — so a stale model would let a conversion regression pass.
+        # Clear it so every Tier 2 run exercises the full convert -> compile ->
+        # sample path end to end.
+        run: |
+          rm -rf "$COMFY_DIR"/models/unet/*.mlpackage "$COMFY_DIR"/models/unet/*.mlmodelc || true
+
       - name: Run Tier 2 (m2 marker)
-        # The golden-image workflow drives the Core ML Converter node, so the
-        # UNet is converted on demand on the first run and reused from the
-        # runner-local cache afterwards.
+        # Drives the Core ML Converter node, which converts the UNet from the
+        # checkpoint on every run (cache purged above).
         run: uv run --no-sync pytest -m m2 tests/ -v
 
       - name: Stop ComfyUI server

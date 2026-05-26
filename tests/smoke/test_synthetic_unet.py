@@ -1,13 +1,13 @@
 """Tier 1 smoke: convert a synthetic micro-UNet through coremltools and load
-it back with python_coreml_stable_diffusion's CoreMLModel.
+it back with CoreMLSuite's runtime CoreMLModel wrapper.
 
-Purpose: catch API breakage in coremltools / ml-stable-diffusion *without*
-needing a real SD checkpoint, the ANE, or a converted .mlmodelc on disk.
+Purpose: catch API breakage in coremltools *without* needing a real SD
+checkpoint, the ANE, or a converted .mlmodelc on disk.
 Runs in minutes on a hosted macOS-ARM runner (no Apple internal stuff).
 
 What it asserts:
   - coremltools.convert still accepts the call shape we use today
-  - the resulting .mlpackage round-trips through CoreMLModel
+  - the resulting .mlpackage round-trips through CoreMLSuite's CoreMLModel
   - expected_inputs exposes the input names/shapes we declared
   - calling the model returns the named output (`noise_pred`)
 
@@ -15,11 +15,14 @@ Auto-skips on non-Apple-Silicon hosts so Tier 0 CI on Linux ignores it.
 """
 import platform
 import shutil
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
+
+from coreml_suite.conversion.unet import CoreMLUNetWrapper
 
 
 pytestmark = pytest.mark.skipif(
@@ -32,7 +35,7 @@ pytestmark = pytest.mark.skipif(
 # coremltools, small enough that conversion finishes in seconds on CPU.
 SAMPLE_SHAPE = (1, 4, 8, 8)
 TIMESTEP_SHAPE = (1,)
-ENCODER_SHAPE = (1, 64, 1, 4)  # matches SD's transposed encoder_hidden_states layout
+ENCODER_SHAPE = (1, 4, 64)  # native diffusers encoder_hidden_states (batch, tokens, hidden)
 OUT_NAME = "noise_pred"
 
 
@@ -41,7 +44,7 @@ class TinyUNet(nn.Module):
 
     Not a real diffusion model. Just enough op variety to exercise the
     PyTorch -> MIL frontend in coremltools and confirm we can still wire
-    the inputs/outputs the way ml-stable-diffusion expects.
+    the inputs/outputs the way CoreMLSuite's runtime expects.
     """
 
     def __init__(self):
@@ -51,12 +54,22 @@ class TinyUNet(nn.Module):
         self.time_proj = nn.Linear(1, 8)
         self.text_proj = nn.Linear(64, 8)
 
-    def forward(self, sample, timestep, encoder_hidden_states):
+    def forward(
+        self,
+        sample,
+        timestep,
+        encoder_hidden_states,
+        timestep_cond=None,
+        added_cond_kwargs=None,
+        down_block_additional_residuals=None,
+        mid_block_additional_residual=None,
+        return_dict=True,
+    ):
         h = self.conv_in(sample)
         t_emb = self.time_proj(timestep.unsqueeze(-1)).view(1, 8, 1, 1)
-        c_emb = self.text_proj(encoder_hidden_states.squeeze(2).mean(-1)).view(1, 8, 1, 1)
+        c_emb = self.text_proj(encoder_hidden_states.mean(1)).view(1, 8, 1, 1)
         h = h + t_emb + c_emb
-        return self.conv_out(h)
+        return (self.conv_out(h),)
 
 
 @pytest.fixture(scope="module")
@@ -65,7 +78,10 @@ def tiny_mlpackage(tmp_path_factory):
     import coremltools as ct
 
     torch.manual_seed(0)
-    model = TinyUNet().eval()
+    model = CoreMLUNetWrapper(
+        TinyUNet().eval(),
+        SimpleNamespace(name="SD15"),
+    )
     example = (
         torch.randn(*SAMPLE_SHAPE),
         torch.randn(*TIMESTEP_SHAPE),
@@ -95,9 +111,9 @@ def tiny_mlpackage(tmp_path_factory):
 
 
 def test_coremltools_convert_round_trips_via_coreml_model(tiny_mlpackage):
-    from python_coreml_stable_diffusion.coreml_model import CoreMLModel
+    from coreml_suite.coreml_model import CoreMLModel
 
-    model = CoreMLModel(str(tiny_mlpackage), "CPU_ONLY", "packages")
+    model = CoreMLModel(str(tiny_mlpackage), "CPU_ONLY")
 
     # expected_inputs is the contract our wrappers depend on. Lock the shape
     # of the dict + a sample entry.

@@ -1,29 +1,21 @@
-name: Tier 1 — Smoke (macOS-ARM)
+name: Tier 1 — Smoke (macOS self-hosted)
 
+# macOS smoke tests run on the self-hosted Apple Silicon runner instead of
+# GitHub-hosted macOS (10x minute multiplier), which exhausts the included
+# Actions minutes too quickly.
 on:
   push:
     branches: [main]
   pull_request:
-    # Gate behind the run-tier1 label too, so external PRs that touch
-    # only docs don't burn a minute of macOS-ARM time. Maintainers can
-    # always re-run via the run-tier1 label.
-    types: [opened, synchronize, reopened, labeled]
 
 jobs:
   smoke:
-    if: |
-      github.event_name == 'push' ||
-      github.event.action != 'labeled' ||
-      contains(github.event.pull_request.labels.*.name, 'run-tier1')
-    runs-on: macos-14  # M1, Apple Silicon hosted runner
+    runs-on: [self-hosted, macOS, ARM64, coreml]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
+      # The self-hosted runner provides uv; no setup-uv action needed.
       - name: uv sync
         run: uv sync --no-install-project
 

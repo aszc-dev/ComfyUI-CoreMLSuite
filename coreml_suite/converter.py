@@ -2,71 +2,38 @@ import gc
 import os
 import shutil
 import time
-from typing import Union
 
 import coremltools as ct
 import numpy as np
-import python_coreml_stable_diffusion.unet
 import torch
-from diffusers import (
-    StableDiffusionPipeline,
-    LatentConsistencyModelPipeline,
-    StableDiffusionXLPipeline,
-)
-from python_coreml_stable_diffusion.unet import (
-    UNet2DConditionModel,
-    UNet2DConditionModelXL,
-    AttentionImplementations,
-)
+from diffusers import UNet2DConditionModel
 
-from coreml_suite.config import ModelVersion
-from coreml_suite.lcm.unet import UNet2DConditionModelLCM
+from coreml_suite.attention import ATTENTION_IMPLEMENTATIONS
+from coreml_suite.conversion.attention import apply_attention_implementation
+from coreml_suite.conversion.shapes import conv2d_output_shape
+from coreml_suite.conversion.trace import prepare_unet_for_coreml_trace
+from coreml_suite.conversion.unet import CoreMLUNetWrapper
 from coreml_suite.logger import logger
-from folder_paths import get_folder_paths
+from coreml_suite.model_version import ModelVersion
+
+DEFAULT_TRACE_TIMESTEP = 999.0
+TEXT_TOKEN_SEQUENCE_LENGTH = 77
 
 
-class StableDiffusionLCMPipeline(LatentConsistencyModelPipeline):
-    pass
-
-
-MODEL_TYPE_TO_UNET_CLS = {
-    ModelVersion.SD15: UNet2DConditionModel,
-    ModelVersion.SDXL: UNet2DConditionModelXL,
-    ModelVersion.LCM: UNet2DConditionModelLCM,
-}
-
-MODEL_TYPE_TO_PIPE_CLS = {
-    ModelVersion.SD15: StableDiffusionPipeline,
-    ModelVersion.SDXL: StableDiffusionXLPipeline,
-    ModelVersion.LCM: StableDiffusionLCMPipeline,
-}
-
-
-def get_unet(model_type: ModelVersion, ref_pipe):
-    ref_unet = ref_pipe.unet
-
-    unet_cls = MODEL_TYPE_TO_UNET_CLS[model_type]
-    cml_unet = unet_cls.from_config(ref_unet.config).eval()
-    cml_unet.load_state_dict(ref_unet.state_dict(), strict=False)
-
-    return cml_unet
-
-
-def get_encoder_hidden_states_shape(ref_pipe, batch_size):
-    text_encoder = (
-        ref_pipe.text_encoder_2
-        if hasattr(ref_pipe, "text_encoder_2")
-        else ref_pipe.text_encoder
+def get_unet(model_version: ModelVersion, ref_unet, attention_implementation):
+    ref_unet = prepare_unet_for_coreml_trace(ref_unet)
+    unet = apply_attention_implementation(
+        ref_unet.eval(),
+        attention_implementation,
     )
+    return CoreMLUNetWrapper(unet, model_version)
 
-    text_token_sequence_length = text_encoder.config.max_position_embeddings
-    hidden_size = (text_encoder.config.hidden_size,)
 
+def get_encoder_hidden_states_shape(ref_unet, batch_size):
     encoder_hidden_states_shape = (
         batch_size,
-        ref_pipe.unet.config.cross_attention_dim or hidden_size,
-        1,
-        text_token_sequence_length,
+        TEXT_TOKEN_SEQUENCE_LENGTH,
+        ref_unet.config.cross_attention_dim,
     )
 
     return encoder_hidden_states_shape
@@ -122,6 +89,8 @@ def convert_to_coreml(
 
 
 def get_out_path(submodule_name, model_name):
+    from folder_paths import get_folder_paths
+
     fname = f"{model_name}_{submodule_name}.mlpackage"
     unet_path = get_folder_paths(submodule_name)[0]
     out_path = os.path.join(unet_path, fname)
@@ -145,15 +114,13 @@ def compile_coreml_model(source_model_path, output_dir, final_name):
     return target_path
 
 
-def get_sample_input(batch_size, encoder_hidden_states_shape, sample_shape, scheduler):
+def get_sample_input(batch_size, encoder_hidden_states_shape, sample_shape):
     sample_unet_inputs = dict(
         [
             ("sample", torch.rand(*sample_shape)),
             (
                 "timestep",
-                torch.tensor([scheduler.timesteps[0].item()] * batch_size).to(
-                    torch.float32
-                ),
+                torch.tensor([DEFAULT_TRACE_TIMESTEP] * batch_size).to(torch.float32),
             ),
             ("encoder_hidden_states", torch.rand(*encoder_hidden_states_shape)),
         ]
@@ -166,7 +133,7 @@ def lcm_inputs(sample_unet_inputs):
     return {"timestep_cond": torch.randn(batch_size, 256).to(torch.float32)}
 
 
-def sdxl_inputs(sample_unet_inputs, ref_pipe):
+def sdxl_inputs(sample_unet_inputs, ref_unet, model_version):
     sample_shape = sample_unet_inputs["sample"].shape
     batch_size = sample_shape[0]
     h = sample_shape[2] * 8
@@ -174,10 +141,7 @@ def sdxl_inputs(sample_unet_inputs, ref_pipe):
     original_size = (h, w)
     crops_coords_top_left = (0, 0)
 
-    is_refiner = (
-        hasattr(ref_pipe.config, "requires_aesthetics_score")
-        and ref_pipe.config.requires_aesthetics_score
-    )
+    is_refiner = model_version == ModelVersion.SDXL_REFINER
 
     if is_refiner:
         aesthetic_score = (6.0,)
@@ -187,12 +151,18 @@ def sdxl_inputs(sample_unet_inputs, ref_pipe):
         time_ids_list = list(original_size + crops_coords_top_left + target_size)
 
     time_ids = torch.tensor(time_ids_list).repeat(batch_size, 1).to(torch.int64)
-    text_embeds_shape = (batch_size, ref_pipe.text_encoder_2.config.hidden_size)
+    text_embeds_shape = (batch_size, get_sdxl_text_embeds_dim(ref_unet, len(time_ids_list)))
 
     return {
         "time_ids": time_ids,
         "text_embeds": torch.randn(*text_embeds_shape).to(torch.float32),
     }
+
+
+def get_sdxl_text_embeds_dim(ref_unet, time_ids_dim):
+    projection_dim = ref_unet.config.projection_class_embeddings_input_dim
+    time_embed_dim = ref_unet.config.addition_time_embed_dim
+    return projection_dim - (time_ids_dim * time_embed_dim)
 
 
 def get_inputs_spec(inputs):
@@ -201,15 +171,13 @@ def get_inputs_spec(inputs):
 
 
 def add_cnet_support(sample_shape, reference_unet):
-    from python_coreml_stable_diffusion.unet import calculate_conv2d_output_shape
-
     additional_residuals_shapes = []
 
     batch_size = sample_shape[0]
     h, w = sample_shape[2:]
 
     # conv_in
-    out_h, out_w = calculate_conv2d_output_shape(
+    out_h, out_w = conv2d_output_shape(
         h,
         w,
         reference_unet.conv_in,
@@ -226,9 +194,7 @@ def add_cnet_support(sample_shape, reference_unet):
         ]
         if hasattr(down_block, "downsamplers") and down_block.downsamplers is not None:
             for downsampler in down_block.downsamplers:
-                out_h, out_w = calculate_conv2d_output_shape(
-                    out_h, out_w, downsampler.conv
-                )
+                out_h, out_w = conv2d_output_shape(out_h, out_w, downsampler.conv)
             additional_residuals_shapes.append(
                 (
                     batch_size,
@@ -252,16 +218,16 @@ def add_cnet_support(sample_shape, reference_unet):
 
 
 def convert_unet(
-    ref_pipe,
+    ref_unet,
     model_version: ModelVersion,
     unet_out_path: str,
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
+    attention_implementation: str = ATTENTION_IMPLEMENTATIONS[0],
     quantize_nbits: str = "none",
 ):
-    coreml_unet = get_unet(model_version, ref_pipe)
-    ref_unet = ref_pipe.unet
+    coreml_unet = get_unet(model_version, ref_unet, attention_implementation)
 
     sample_shape = (
         batch_size,  # B
@@ -270,20 +236,17 @@ def convert_unet(
         sample_size[1],  # W
     )
 
-    encoder_hidden_states_shape = get_encoder_hidden_states_shape(ref_pipe, batch_size)
-
-    scheduler = ref_pipe.scheduler
-    scheduler.set_timesteps(50)
+    encoder_hidden_states_shape = get_encoder_hidden_states_shape(ref_unet, batch_size)
 
     sample_inputs = get_sample_input(
-        batch_size, encoder_hidden_states_shape, sample_shape, scheduler
+        batch_size, encoder_hidden_states_shape, sample_shape
     )
 
     if model_version == ModelVersion.LCM:
         sample_inputs |= lcm_inputs(sample_inputs)
 
-    if model_version == ModelVersion.SDXL:
-        sample_inputs |= sdxl_inputs(sample_inputs, ref_pipe)
+    if model_version in {ModelVersion.SDXL, ModelVersion.SDXL_REFINER}:
+        sample_inputs |= sdxl_inputs(sample_inputs, ref_unet, model_version)
 
     if controlnet_support:
         sample_inputs |= add_cnet_support(sample_shape, ref_unet)
@@ -335,8 +298,8 @@ def convert(
     batch_size: int = 1,
     sample_size: tuple[int, int] = (64, 64),
     controlnet_support: bool = False,
-    lora_weights: list[tuple[Union[str, os.PathLike], float]] = None,
-    attn_impl: str = AttentionImplementations.SPLIT_EINSUM.name,
+    lora_weights: list[tuple[str | os.PathLike, float]] = None,
+    attn_impl: str = ATTENTION_IMPLEMENTATIONS[0],
     config_path: str = None,
     quantize_nbits: str = "none",
 ):
@@ -344,37 +307,42 @@ def convert(
         logger.info(f"Found existing model at {unet_out_path}! Skipping..")
         return
 
-    python_coreml_stable_diffusion.unet.ATTENTION_IMPLEMENTATION_IN_EFFECT = (
-        AttentionImplementations(attn_impl)
-    )
-
-    ref_pipe = get_pipeline(ckpt_path, config_path, model_version)
+    if attn_impl not in ATTENTION_IMPLEMENTATIONS:
+        raise ValueError(
+            f"Unsupported attention implementation {attn_impl!r}. "
+            f"Expected one of {ATTENTION_IMPLEMENTATIONS}."
+        )
+    ref_unet = load_unet(ckpt_path, config_path)
 
     for i, lora_weight in enumerate(lora_weights or []):
         lora_path, strength = lora_weight
         adapter_name = f"lora_{i}"
-        ref_pipe.load_lora_weights(lora_path, adapter_name=adapter_name)
-        ref_pipe.set_adapters([adapter_name], adapter_weights=[strength])
-        ref_pipe.fuse_lora()
+        ref_unet.load_lora_adapter(lora_path, adapter_name=adapter_name)
+        ref_unet.set_adapters([adapter_name], weights=[strength])
+        ref_unet.fuse_lora()
 
     convert_unet(
-        ref_pipe,
+        ref_unet,
         model_version,
         unet_out_path,
         batch_size,
         sample_size,
         controlnet_support,
+        attention_implementation=attn_impl,
         quantize_nbits=quantize_nbits,
     )
 
 
-def get_pipeline(ckpt_path, config_path, model_version):
-    pipe_cls = MODEL_TYPE_TO_PIPE_CLS[model_version]
-    ref_pipe = pipe_cls.from_single_file(ckpt_path, original_config_file=config_path)
-    return ref_pipe
+def load_unet(ckpt_path, config_path):
+    return UNet2DConditionModel.from_single_file(
+        ckpt_path,
+        original_config=config_path,
+    )
 
 
 def compile_model(out_path, out_name, submodule_name):
+    from folder_paths import get_folder_paths
+
     # Compile the model
     target_path = compile_coreml_model(
         out_path, get_folder_paths(submodule_name)[0], f"{out_name}_{submodule_name}"

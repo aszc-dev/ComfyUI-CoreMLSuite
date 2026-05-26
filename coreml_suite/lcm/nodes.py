@@ -1,10 +1,9 @@
 import os
 
 from coremltools import ComputeUnit
-from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 
 from coreml_suite import COREML_NODE
-from coreml_suite.lcm import converter as lcm_converter
+from coreml_suite.coreml_model import CoreMLModel
 
 
 class COREML_CONVERT_LCM(COREML_NODE):
@@ -48,6 +47,8 @@ class COREML_CONVERT_LCM(COREML_NODE):
         The converted model is also saved to "models/unet" directory and
         can be loaded with the "LCMCoreMLLoaderUNet" node.
         """
+        from coreml_suite.lcm import converter as lcm_converter
+
         h = height
         w = width
         sample_size = (h // 8, w // 8)
@@ -67,4 +68,4 @@ class COREML_CONVERT_LCM(COREML_NODE):
             )
         target_path = lcm_converter.compile_model(out_path=out_path, out_name=out_name)
 
-        return (CoreMLModel(target_path, compute_unit, "compiled"),)
+        return (CoreMLModel(target_path, compute_unit),)

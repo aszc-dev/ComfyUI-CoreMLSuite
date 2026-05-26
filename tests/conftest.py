@@ -4,7 +4,7 @@
   that transitively import `comfy.*` resolve when pytest is invoked from
   this package's root.
 - Auto-applies tier markers based on the directory a test lives in, so
-  individual files don't have to repeat @pytest.mark.unit / .m2.
+  individual files don't have to repeat @pytest.mark.unit / .smoke.
 """
 import sys
 from pathlib import Path
@@ -26,9 +26,9 @@ _TIER_BY_DIR = {
     "tests/smoke": "smoke",
 }
 
-# When the user asks for a single tier (-m unit / -m m2), skip the other
-# directories at collection time. Tier-0 cannot afford to import tests/m2
-# files because they pull in PIL + ComfyUI runtime which Linux CI won't have.
+# When the user asks for a single tier (-m unit / -m smoke), skip the other
+# directories at collection time. Tier-0 cannot afford to import tests/smoke
+# files because they pull in coremltools which Linux CI won't have.
 _TIER_DIRS = {
     "unit": ("/tests/unit/",),
     "m2": ("/tests/m2/", "/tests/integration/"),

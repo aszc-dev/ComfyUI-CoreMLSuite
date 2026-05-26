@@ -1,17 +1,10 @@
-from enum import Enum
-
 import torch
 
 from comfy import supported_models_base
 from comfy import latent_formats
 from comfy.model_detection import convert_config
 
-
-class ModelVersion(Enum):
-    SD15 = "sd15"
-    SDXL = "sdxl"
-    SDXL_REFINER = "sdxl_refiner"
-    LCM = "lcm"
+from coreml_suite.model_version import ModelVersion
 
 
 config_map = {

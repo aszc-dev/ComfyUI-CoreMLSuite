@@ -24,7 +24,6 @@ class CoreMLInputs:
         sample = self.x.cpu().numpy().astype(np.float16)
 
         context = self.context.cpu().numpy().astype(np.float16)
-        context = context.transpose(0, 2, 1)[:, :, None, :]
 
         t = self.t.cpu().numpy().astype(np.float16)
 
@@ -57,8 +56,7 @@ class CoreMLInputs:
     def chunks(self, expected_inputs):
         sample_shape = expected_inputs["sample"]["shape"]
         timestep_shape = expected_inputs["timestep"]["shape"]
-        hidden_shape = expected_inputs["encoder_hidden_states"]["shape"]
-        context_shape = (hidden_shape[0], hidden_shape[3], hidden_shape[1])
+        context_shape = expected_inputs["encoder_hidden_states"]["shape"]
 
         chunked_x = chunk_batch(self.x, sample_shape)
         ts = list(torch.full((len(chunked_x), timestep_shape[0]), self.t[0]))

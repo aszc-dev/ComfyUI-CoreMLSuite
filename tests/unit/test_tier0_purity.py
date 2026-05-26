@@ -7,10 +7,10 @@ after collection. If they are, a tests/unit/ file is transitively
 pulling them in and the Tier-0 promise — "runs on Linux with no Mac
 stack" — is broken.
 
-When other tiers (m2 / integration) are also collected, comfy is
-expected in sys.modules (integration imports it deliberately), so the
-check is skipped in mixed runs — Tier-0 purity is only meaningful when
-nothing else is loaded.
+When other tiers are also collected, framework modules may be imported
+deliberately (e.g. smoke pulls in coremltools), so the check is skipped
+unless the run is purely `-m unit` — Tier-0 purity is only meaningful
+when nothing else is loaded.
 """
 import sys
 
