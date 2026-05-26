@@ -1,7 +1,5 @@
+coreml-diffusion @ git+https://github.com/aszc-dev/coreml-diffusion@v0.1.0
 torch>=2.7,<2.8
 coremltools>=9,<10
 numpy>=2,<3
 diffusers>=0.30
-peft>=0.13
-omegaconf>=2.3
-transformers>=4.44
