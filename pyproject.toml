@@ -19,9 +19,9 @@ dependencies = [
 Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
 
 [tool.uv.sources]
-# Local path until coreml-diffusion is published (GitHub/PyPI). Switch to
-# `{ git = "...", tag = "vX.Y.Z" }` once the repo exists so CI can resolve it.
-coreml-diffusion = { path = "../../../coreml-diffusion", editable = true }
+# Pinned to a published tag so CI can resolve it. Bump the tag when depending on
+# a newer coreml-diffusion release.
+coreml-diffusion = { git = "https://github.com/aszc-dev/coreml-diffusion", tag = "v0.1.0" }
 
 [tool.comfy]
 PublisherId = "aszc-dev"

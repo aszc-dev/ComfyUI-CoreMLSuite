@@ -240,7 +240,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "coreml-diffusion", editable = "../../../coreml-diffusion" },
+    { name = "coreml-diffusion", git = "https://github.com/aszc-dev/coreml-diffusion?tag=v0.1.0" },
     { name = "coremltools", specifier = ">=9,<10" },
     { name = "diffusers", specifier = ">=0.30" },
     { name = "numpy", specifier = ">=2,<3" },
@@ -281,7 +281,7 @@ wheels = [
 [[package]]
 name = "coreml-diffusion"
 version = "0.1.0"
-source = { editable = "../../../coreml-diffusion" }
+source = { git = "https://github.com/aszc-dev/coreml-diffusion?tag=v0.1.0#0cc9382526ba3d1f2e6c8454836638d34b0977b5" }
 dependencies = [
     { name = "coremltools" },
     { name = "diffusers" },
@@ -291,20 +291,6 @@ dependencies = [
     { name = "torch" },
     { name = "transformers" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "coremltools", specifier = ">=9,<10" },
-    { name = "diffusers", specifier = ">=0.30" },
-    { name = "numpy", specifier = ">=2,<3" },
-    { name = "omegaconf", specifier = ">=2.3" },
-    { name = "peft", specifier = ">=0.13" },
-    { name = "torch", specifier = ">=2.7,<2.8" },
-    { name = "transformers", specifier = ">=4.44" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "coremltools"
