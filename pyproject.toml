@@ -1,12 +1,12 @@
 [project]
 name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
-version = "2.1.0"
+version = "2.1.1"
 license = "MIT"
 requires-python = ">=3.12,<3.13"
 packages = [{ include = "coreml_suite" }]
 dependencies = [
-    "coreml-diffusion",
+    "coreml-diffusion>=0.1.0,<0.2",
     "torch>=2.7,<2.8",
     "coremltools>=9,<10",
     "numpy>=2,<3",
@@ -18,15 +18,10 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
 
-[tool.uv.sources]
-# Pinned to a published tag so CI can resolve it. Bump the tag when depending on
-# a newer coreml-diffusion release.
-coreml-diffusion = { git = "https://github.com/aszc-dev/coreml-diffusion", tag = "v0.1.0" }
-
 [tool.comfy]
 PublisherId = "aszc-dev"
 DisplayName = "ComfyUI-CoreMLSuite"
-Icon = ""
+Icon = "https://raw.githubusercontent.com/aszc-dev/ComfyUI-CoreMLSuite/main/assets/snake.png"
 requires-comfyui = ">=0.3.27"
 
 [dependency-groups]

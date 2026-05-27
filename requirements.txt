@@ -1,4 +1,4 @@
-coreml-diffusion @ git+https://github.com/aszc-dev/coreml-diffusion@v0.1.0
+coreml-diffusion>=0.1.0,<0.2
 torch>=2.7,<2.8
 coremltools>=9,<10
 numpy>=2,<3
