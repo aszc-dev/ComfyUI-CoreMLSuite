@@ -1,4 +1,4 @@
-coreml-diffusion>=0.1.1,<0.2
+coreml-diffusion>=0.1.4,<0.2
 coremltools>=9,<10
 numpy>=2,<3
 diffusers>=0.30

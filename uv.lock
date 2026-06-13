@@ -218,7 +218,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "coreml-diffusion", specifier = ">=0.1.1,<0.2" },
+    { name = "coreml-diffusion", specifier = ">=0.1.4,<0.2" },
     { name = "coremltools", specifier = ">=9,<10" },
     { name = "diffusers", specifier = ">=0.30" },
     { name = "numpy", specifier = ">=2,<3" },
@@ -257,7 +257,7 @@ wheels = [
 
 [[package]]
 name = "coreml-diffusion"
-version = "0.1.1"
+version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coremltools" },
@@ -268,9 +268,9 @@ dependencies = [
     { name = "torch" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/d9/fbdfd6b87668c33711483447d1bf4669522daa32fab472dfc3477c24b60d/coreml_diffusion-0.1.1.tar.gz", hash = "sha256:8e1d5aee727c35a38b7693d17cc9711f818c4996dfaa2ade8340faf448097b77", size = 499670, upload-time = "2026-05-27T03:54:09.093Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/41/22b73cd943812f0d2ebef736316131866a0a1917504d0ef9c472792ed129/coreml_diffusion-0.1.4.tar.gz", hash = "sha256:dfa6314327f1cf1a4339394557f8d2572a1ba1e86a3d103265d057f18e23b094", size = 928657, upload-time = "2026-06-13T00:40:33.696Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/17/094f310fc8f4ba144ca872f786a985a45abbe947adf43d881075edda5dab/coreml_diffusion-0.1.1-py3-none-any.whl", hash = "sha256:4bfeac8004d71825c145d302154aa87e7cc3d6fec78c101b221a211178a08f1f", size = 23882, upload-time = "2026-05-27T03:54:08.053Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/d0/9e7bd4806b3a4275ddad5de259c0ac6699ba2196e41eb39dde7368111c21/coreml_diffusion-0.1.4-py3-none-any.whl", hash = "sha256:4ac7724ed6a470ea398ac441b5d93051569bab076a47ac4700dba03056abbd6c", size = 35896, upload-time = "2026-06-13T00:40:32.757Z" },
 ]
 
 [[package]]
