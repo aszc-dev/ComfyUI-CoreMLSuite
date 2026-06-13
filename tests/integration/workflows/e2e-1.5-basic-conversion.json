@@ -107,7 +107,6 @@
   "10": {
     "inputs": {
       "ckpt_name": "dreamshaper_8.safetensors",
-      "model_version": "SD15",
       "height": 512,
       "width": 512,
       "batch_size": 1,

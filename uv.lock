@@ -186,11 +186,10 @@ wheels = [
 [[package]]
 name = "comfyui-coremlsuite"
 version = "2.1.2"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "coreml-diffusion" },
     { name = "coremltools" },
-    { name = "diffusers" },
     { name = "numpy" },
 ]
 
@@ -218,9 +217,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "coreml-diffusion", specifier = ">=0.1.1,<0.2" },
+    { name = "coreml-diffusion", specifier = ">=0.1.5,<0.2" },
     { name = "coremltools", specifier = ">=9,<10" },
-    { name = "diffusers", specifier = ">=0.30" },
     { name = "numpy", specifier = ">=2,<3" },
 ]
 
@@ -257,7 +255,7 @@ wheels = [
 
 [[package]]
 name = "coreml-diffusion"
-version = "0.1.1"
+version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coremltools" },
@@ -268,9 +266,9 @@ dependencies = [
     { name = "torch" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/d9/fbdfd6b87668c33711483447d1bf4669522daa32fab472dfc3477c24b60d/coreml_diffusion-0.1.1.tar.gz", hash = "sha256:8e1d5aee727c35a38b7693d17cc9711f818c4996dfaa2ade8340faf448097b77", size = 499670, upload-time = "2026-05-27T03:54:09.093Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/34/816457497ad7f039e79ced38b76703c908b7fe12cc5f755e8b88a46b443c/coreml_diffusion-0.1.5.tar.gz", hash = "sha256:4b6ca2182e1ee18d4d50ee526949887c7524b69855f8372621473a7016d1fd35", size = 930907, upload-time = "2026-06-13T12:06:21.398Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/17/094f310fc8f4ba144ca872f786a985a45abbe947adf43d881075edda5dab/coreml_diffusion-0.1.1-py3-none-any.whl", hash = "sha256:4bfeac8004d71825c145d302154aa87e7cc3d6fec78c101b221a211178a08f1f", size = 23882, upload-time = "2026-05-27T03:54:08.053Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/0d/56ced91b9f3e6135f377340a6fce347ea371b7816073421096a61a2e9e27/coreml_diffusion-0.1.5-py3-none-any.whl", hash = "sha256:6aff81a69a8d79d40d49fe1ab95cd964360ea025f297731f5ee6fcc22f46cdb1", size = 37368, upload-time = "2026-06-13T12:06:20.333Z" },
 ]
 
 [[package]]

@@ -1,24 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "2.1.2"
 license = "MIT"
 requires-python = ">=3.12,<3.13"
-packages = [{ include = "coreml_suite" }]
 dependencies = [
     # torch is provided by the host (ComfyUI) and intentionally left unpinned
     # here: a hard torch cap would downgrade the host's torch and break its
     # torchvision/torchaudio ABI. coreml-diffusion pulls torch>=2.7 transitively.
-    "coreml-diffusion>=0.1.1,<0.2",
+    # >=0.1.5: model-version auto-detection (convert(model_version=None)).
+    "coreml-diffusion>=0.1.5,<0.2",
     "coremltools>=9,<10",
     "numpy>=2,<3",
-    # diffusers is still imported directly by the comfy-side LCM converter
-    # (coreml_suite/lcm/converter.py) until E-LCM folds it into the package.
-    "diffusers>=0.30",
 ]
 
 [project.urls]
 Repository = "https://github.com/aszc-dev/ComfyUI-CoreMLSuite"
+
+[tool.hatch.build.targets.wheel]
+packages = ["coreml_suite"]
 
 [tool.comfy]
 PublisherId = "aszc-dev"

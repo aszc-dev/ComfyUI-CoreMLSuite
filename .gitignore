@@ -3,3 +3,4 @@ __pycache__/
 models/
 .venv/
 test_results/
+.claude/
