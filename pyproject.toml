@@ -7,7 +7,7 @@ name = "comfyui-coremlsuite"
 description = "This extension contains a set of custom nodes for ComfyUI that allow you to use Core ML models in your ComfyUI workflows."
 version = "2.1.2"
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     # torch is provided by the host (ComfyUI) and intentionally left unpinned
     # here: a hard torch cap would downgrade the host's torch and break its
