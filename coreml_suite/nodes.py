@@ -7,7 +7,6 @@ from coreml_suite import COREML_NODE
 from coreml_suite.coreml_model import CoreMLModel
 from coreml_suite.lcm.utils import add_lcm_model_options, lcm_patch, is_lcm
 from coreml_suite.logger import logger
-from coreml_diffusion import ModelVersion
 from nodes import KSampler, LoraLoader, KSamplerAdvanced
 
 from coreml_suite.models import (
@@ -226,14 +225,18 @@ class CoreMLModelAdapter(COREML_NODE):
 
 
 class CoreMLConverter(COREML_NODE):
-    """Converts a LCM model to Core ML."""
+    """Converts a Stable Diffusion checkpoint (UNet) to Core ML.
+
+    The model version (SD15 / SDXL / SDXL refiner / LCM) is auto-detected from
+    the checkpoint's architecture, so there is no version dropdown — one node
+    converts every supported family, including full-distill LCM.
+    """
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
-                "model_version": (_discover("list_model_versions", ["SD15", "SDXL"]),),
                 "height": ("INT", {"default": 512, "min": 8, "step": 8}),
                 "width": ("INT", {"default": 512, "min": 8, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
@@ -274,7 +277,6 @@ class CoreMLConverter(COREML_NODE):
     def convert(
         self,
         ckpt_name,
-        model_version,
         height,
         width,
         batch_size,
@@ -284,9 +286,11 @@ class CoreMLConverter(COREML_NODE):
         quantize_nbits="none",
         lora_params=None,
     ):
-        """Converts a LCM model to Core ML.
+        """Converts a checkpoint's UNet to Core ML.
 
         Args:
+            ckpt_name (str): Checkpoint to convert; its model version is
+                auto-detected from the weights.
             height (int): Height of the target image.
             width (int): Width of the target image.
             batch_size (int): Batch size.
@@ -296,10 +300,8 @@ class CoreMLConverter(COREML_NODE):
             coreml_model: The converted Core ML model.
 
         The converted model is also saved to "models/unet" directory and
-        can be loaded with the "LCMCoreMLLoaderUNet" node.
+        can be loaded with the "Load Core ML UNet" node.
         """
-        model_version = ModelVersion[model_version]
-
         lora_params = lora_params or {}
         lora_params = [(k, v[0]) for k, v in lora_params.items()]
         lora_params = sorted(lora_params, key=lambda lora: lora[0])
@@ -328,7 +330,7 @@ class CoreMLConverter(COREML_NODE):
         logger.info(f"Attention implementation: {attention_implementation}")
 
         if lora_params:
-            logger.info(f"LoRAs used:")
+            logger.info("LoRAs used:")
             for lora_param in lora_params:
                 logger.info(f"  {lora_param[0]} - strength: {lora_param[1]}")
 
@@ -345,7 +347,7 @@ class CoreMLConverter(COREML_NODE):
 
         coreml_diffusion.convert(
             ckpt_path,
-            model_version,
+            None,  # model_version auto-detected from the checkpoint
             unet_out_path,
             sample_size=sample_size,
             batch_size=batch_size,

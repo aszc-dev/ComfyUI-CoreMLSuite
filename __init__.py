@@ -11,9 +11,6 @@ from coreml_suite.nodes import (
     CoreMLConverter,
     COREML_LOAD_LORA,
 )
-from coreml_suite.lcm import (
-    COREML_CONVERT_LCM,
-)
 
 NODE_CLASS_MAPPINGS = {
     "CoreMLUNetLoader": CoreMLLoaderUNet,
@@ -22,7 +19,6 @@ NODE_CLASS_MAPPINGS = {
     "CoreMLModelAdapter": CoreMLModelAdapter,
     "Core ML LoRA Loader": COREML_LOAD_LORA,
     "Core ML Converter": CoreMLConverter,
-    "Core ML LCM Converter": COREML_CONVERT_LCM,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "CoreMLUNetLoader": "Load Core ML UNet",
@@ -31,5 +27,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CoreMLModelAdapter": "Core ML Adapter (Experimental)",
     "Core ML LoRA Loader": "Load LoRA to use with Core ML",
     "Core ML Converter": "Convert Checkpoint to Core ML",
-    "Core ML LCM Converter": "Convert LCM to Core ML",
 }
