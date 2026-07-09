@@ -104,7 +104,7 @@ and no longer depends on that package: UNet conversion runs natively on
 `diffusers`' `UNet2DConditionModel`, the ANE attention path (`SPLIT_EINSUM`,
 `SPLIT_EINSUM_V2`) is reimplemented as standalone `diffusers` attention
 processors, and the toolchain tracks current ComfyUI (NumPy 2, Torch 2.7+,
-coremltools 9, Python 3.11/3.12). Conversion now lives in the separate
+coremltools 9, Python 3.12+). Conversion now lives in the separate
 [coreml-diffusion](https://github.com/aszc-dev/coreml-diffusion) package.
 
 ## Support

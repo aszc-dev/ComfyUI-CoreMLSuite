@@ -60,11 +60,11 @@ and can't be changed afterward.
 ## FaceDetailer / detailers error on size
 
 Detailers rescale latents internally (e.g. 512 → 1024), which breaks the model's
-fixed input shape.
+fixed input shape. There is no workaround node — a Core ML model only accepts
+the resolution it was converted for.
 
-**Fix:** use the `CoreMLDetailerHookProvider` node to pin the detailer's internal
-size to the model's converted resolution. Note it only offers preset sizes, so
-non-standard resolutions may not be selectable.
+**Fix:** convert a second model at the detailer's internal resolution and use it
+for the detailing pass, or run the detailer with a standard (non–Core ML) model.
 
 ## Inpainting checkpoint errors (`tensor size 9 vs 4`)
 

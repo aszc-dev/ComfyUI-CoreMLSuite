@@ -3,8 +3,10 @@
 ## Conversion is the only supported path
 
 You always start from a Stable Diffusion checkpoint (`.safetensors` / `.ckpt`)
-and convert it with the **Convert Checkpoint to Core ML** (or **Convert LCM**)
-node. Pre-converted Core ML models from elsewhere are not supported, because:
+and convert it with the **Convert Checkpoint to Core ML** node. The model
+version (SD1.5, SDXL, SDXL refiner, full-distill LCM) is auto-detected from the
+checkpoint. Pre-converted Core ML models from elsewhere are not supported,
+because:
 
 - The suite uses its own input **dimensions**, **naming convention**, and
   **metadata**, all produced by the
@@ -23,7 +25,7 @@ or `coremlcompiler` dependency**.
 
 Conversion runs **once**, not on every queue. The converter encodes all
 conversion parameters into the output filename (via `coreml_diffusion.compose_out_name`,
-called in `coreml_suite/nodes.py:313`):
+called in `coreml_suite/nodes.py`):
 
 - checkpoint name, `batch_size`, `width`, `height`
 - `controlnet_support`, `attention_implementation`
@@ -46,7 +48,7 @@ it short-circuits to the cached file.)
 
 ## Quantization
 
-Both converter nodes accept an optional `quantize_nbits` dropdown that runs
+The converter node accepts an optional `quantize_nbits` dropdown that runs
 k-means weight palettization (`coremltools.optimize.coreml.palettize_weights`) on
 the UNet before saving.
 
@@ -89,7 +91,3 @@ The conversion engine was extracted into the standalone
 The nodes in this suite resolve ComfyUI paths and call into it; node names,
 inputs, and outputs are unchanged, so the split has effectively no user-facing
 impact beyond `pip install` pulling one more dependency.
-
-One detail: the LCM converter still imports `diffusers` directly (in
-`coreml_suite/lcm/converter.py`) to download the hardcoded LCM model from Hugging
-Face. This is an internal note, not something you need to act on.
