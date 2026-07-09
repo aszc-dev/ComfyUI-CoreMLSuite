@@ -77,8 +77,11 @@ passed through the same LoRA nodes used at conversion. Since `lora_name` and
 
 ## LCM conversion with ControlNet
 
-Convert [LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7)
-with the LCM converter, then use it with or without ControlNet.
+Convert a full-distill LCM checkpoint (e.g.
+[LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7)) with
+the standard **Convert Checkpoint to Core ML** node — the LCM architecture is
+auto-detected. Use it with or without ControlNet. When sampling, set
+`sampler_name` to `lcm` and `scheduler` to `sgm_uniform`.
 
 ![LCM + ControlNet](../assets/lcm+controlnet.png?raw=true)
 

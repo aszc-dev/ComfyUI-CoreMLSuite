@@ -10,7 +10,7 @@
 | Inpainting checkpoints (9-channel) | ❌ Unsupported | |
 | ControlNet | ✅ Supported | Convert the checkpoint with `controlnet_support = True` |
 | LoRA | ⚠️ Experimental | Inconsistent per-LoRA; baked at conversion, immutable afterward |
-| LCM | ⚠️ Experimental | Hardcoded to LCM Dreamshaper v7 |
+| LCM | ⚠️ Experimental | Full-distill LCM checkpoints auto-detected by the converter |
 | SVD | ❌ Not supported | |
 | AnimateDiff | ❌ Not supported | Motion modules need pre-conversion injection; not feasible today |
 | IPAdapter | ❌ Not supported | Needs a real `MODEL` the Core ML wrapper can't provide |
@@ -42,7 +42,7 @@ degraded versus the safetensors original (an upstream conversion artifact). Use
 The Adapter wraps a Core ML model to look like a standard ComfyUI `MODEL`, which
 covers many standard and custom nodes. But it can't fully emulate a real model:
 operations that need genuine `MODEL` internals — model merges, IPAdapter, some
-LoRA flows, detailers without the size hook — generally won't work, and the model's
+LoRA flows, detailers — generally won't work, and the model's
 fixed input shapes aren't validated, so mismatches error at runtime. Prefer the
 native Core ML Sampler when you don't need the `MODEL` type.
 

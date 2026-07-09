@@ -11,7 +11,6 @@ All nodes live in the **Core ML Suite** category. Right-click the canvas →
 | Core ML Adapter (Experimental) | `CoreMLModelAdapter` | Wrap as a standard `MODEL` |
 | Load LoRA to use with Core ML | `Core ML LoRA Loader` | Bake LoRA(s) at conversion |
 | Convert Checkpoint to Core ML | `Core ML Converter` | Convert a checkpoint |
-| Convert LCM to Core ML | `Core ML LCM Converter` | Convert LCM Dreamshaper v7 |
 
 ---
 
@@ -122,14 +121,15 @@ only affects CLIP and can be changed freely. After conversion, when loading with
 
 ![Checkpoint Converter](../assets/checkpoint_converter.png?raw=true)
 
-Converts a SD1.5- or SDXL-based checkpoint from `models/checkpoints` to a Core ML
-`.mlpackage` in `models/unet`. The conversion parameters are encoded in the
-output name, so an already-converted model is reused instead of re-converted.
-See [conversion](conversion.md) for details.
+Converts a checkpoint from `models/checkpoints` to a Core ML `.mlpackage` in
+`models/unet`. The model version (SD1.5, SDXL, SDXL refiner, or full-distill
+LCM) is auto-detected from the checkpoint's architecture — there is no version
+dropdown. The conversion parameters are encoded in the output name, so an
+already-converted model is reused instead of re-converted. See
+[conversion](conversion.md) for details.
 
 - **Inputs**
   - `ckpt_name` — checkpoint in `models/checkpoints`.
-  - `model_version` — `SD15` or `SDXL` (list is discovered from `coreml-diffusion`).
   - `height`, `width` — target image size; any positive multiple of 8 (default
     512). The model's input size is fixed at these values.
   - `batch_size` — default 1; raise to convert a batch-capable model.
@@ -150,24 +150,8 @@ See [conversion](conversion.md) for details.
 > named like the checkpoint (e.g. `juggernaut.safetensors` →
 > `juggernaut.yaml`); it is loaded automatically during conversion.
 
----
-
-## Convert LCM to Core ML (`Core ML LCM Converter`)
-
-![LCM Converter](../assets/lcm_converter.png?raw=true)
-
-Converts [SimianLuo/LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7)
-to Core ML in `models/unet`. As with the checkpoint converter, the parameters are
-encoded in the name and an existing model is reused.
-
-- **Inputs**
-  - `height`, `width` — 512–768, multiple of 8 (default 512).
-  - `batch_size` — default 1.
-  - `compute_unit` — used only when loading.
-  - `controlnet_support` — default `False`.
-- **Output**
-  - `coreml_model`.
-
 > [!NOTE]
-> When sampling an LCM model, set `sampler_name` to `lcm` and `scheduler` to
-> `sgm_uniform`. Conversion can take a while.
+> Full-distill LCM checkpoints (e.g.
+> [LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7)) are
+> detected and converted like any other checkpoint. When sampling an LCM model,
+> set `sampler_name` to `lcm` and `scheduler` to `sgm_uniform`.

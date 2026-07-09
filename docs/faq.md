@@ -67,8 +67,8 @@ avoids. Use the native sampler unless you specifically need a `MODEL` (e.g.
 
 ## Which Python versions work?
 
-Both 3.11 and 3.12. Older 3.12 install failures came from the now-removed
-`ml-stable-diffusion` build, not from this suite.
+Python 3.12 or newer (`requires-python >=3.12`). Older 3.12 install failures
+came from the now-removed `ml-stable-diffusion` build, not from this suite.
 
 ## Long prompts crash my workflow
 
